@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { MoreHorizontal, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
-  banAdminUser,
-  listAdminUsers,
-  suspendAdminUser,
-  verifyAdminUser,
-  warnAdminUser,
-  type AdminManagedUser,
-} from "../api/adminUsers";
+  useAdminUsersQuery,
+  useBanAdminUserMutation,
+  useSuspendAdminUserMutation,
+  useVerifyAdminUserMutation,
+  useWarnAdminUserMutation,
+} from "../api/adminUsers.query";
+import type { AdminManagedUser } from "../api/adminUsers";
+import { handleApiError } from "../api/client";
 import { PageHeader, Panel, Pagination, StatusPill } from "../components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
@@ -29,73 +30,53 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { formatNumber } from "../data";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
 export function UserManagement({ accessToken }: { accessToken: string }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
-  const [rows, setRows] = useState<AdminManagedUser[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [selected, setSelected] = useState<AdminManagedUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      setIsLoading(true);
-      listAdminUsers(accessToken, {
-        q: query,
-        status,
-        page,
-        limit: PAGE_SIZE,
-      })
-        .then((result) => {
-          if (cancelled) return;
-          setRows(result.items);
-          setTotalPages(Math.max(1, result.totalPages));
-        })
-        .catch((error: Error) => {
-          if (cancelled) return;
-          toast.error(error.message || "Failed to load users.");
-        })
-        .finally(() => {
-          if (!cancelled) setIsLoading(false);
-        });
-    }, 250);
+  const queryParams = useMemo(
+    () => ({ q: query, status, page, limit: pageSize }),
+    [page, pageSize, query, status],
+  );
+  const usersQuery = useAdminUsersQuery(accessToken, queryParams);
+  const banMutation = useBanAdminUserMutation(accessToken);
+  const suspendMutation = useSuspendAdminUserMutation(accessToken);
+  const warnMutation = useWarnAdminUserMutation(accessToken);
+  const verifyMutation = useVerifyAdminUserMutation(accessToken);
+  const rows = usersQuery.data?.items ?? [];
+  const totalPages = Math.max(1, usersQuery.data?.totalPages ?? 1);
+  const isLoading = usersQuery.isLoading || usersQuery.isFetching;
+  const isActionLoading =
+    banMutation.isPending ||
+    suspendMutation.isPending ||
+    warnMutation.isPending ||
+    verifyMutation.isPending;
 
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [accessToken, page, query, status]);
-
-  const updateSelectedUser = (user: AdminManagedUser) => {
-    setRows((current) => current.map((item) => (item.id === user.id ? user : item)));
-    setSelected(user);
-  };
-
-  const handleUserAction = async (
-    action: (token: string, userId: string) => Promise<AdminManagedUser> | Promise<void>,
+  const handleUserAction = (
+    action: {
+      mutateAsync: (userId: string) => Promise<AdminManagedUser | void>;
+    },
     successMessage: string,
   ) => {
     if (!selected || isActionLoading) return;
 
-    try {
-      setIsActionLoading(true);
-      const result = await action(accessToken, selected.id);
+    action
+      .mutateAsync(selected.id)
+      .then((result) => {
+        if (result) {
+          setSelected(result);
+        }
 
-      if (result) {
-        updateSelectedUser(result);
-      }
-
-      toast.success(successMessage);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Action failed.");
-    } finally {
-      setIsActionLoading(false);
-    }
+        toast.success(successMessage);
+      })
+      .catch((error) => {
+        toast.error(handleApiError(error, "Action failed."));
+      });
   };
 
   return (
@@ -132,6 +113,24 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="banned">Banned</SelectItem>
                 <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => {
+                setPageSize(Number(v));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-28 bg-[#1A1A1A] border-white/10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={String(value)}>
+                    {value} / page
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </>
@@ -238,7 +237,7 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(banAdminUser, "User banned successfully.")}
+                    onClick={() => handleUserAction(banMutation, "User banned successfully.")}
                   >
                     Ban User
                   </Button>
@@ -246,7 +245,7 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(suspendAdminUser, "User suspended successfully.")}
+                    onClick={() => handleUserAction(suspendMutation, "User suspended successfully.")}
                   >
                     Suspend User
                   </Button>
@@ -254,14 +253,14 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-white/15 text-white hover:bg-white/5 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(warnAdminUser, "Warning sent successfully.")}
+                    onClick={() => handleUserAction(warnMutation, "Warning sent successfully.")}
                   >
                     Send Warning
                   </Button>
                   <Button
                     className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(verifyAdminUser, "User verified successfully.")}
+                    onClick={() => handleUserAction(verifyMutation, "User verified successfully.")}
                   >
                     Verify Account
                   </Button>

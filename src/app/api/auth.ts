@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api/v1').replace(/\/$/, '');
+import { apiClient, authHeaders, getApiData } from './client';
 
 export type AdminUser = {
   id: string;
@@ -26,20 +26,10 @@ type AuthResponse = {
   };
 };
 
-type ApiEnvelope<T> = {
-  success: boolean;
-  message?: string;
-  data: T;
-  error?: {
-    message?: string;
-  };
-};
-
 export async function loginAdmin(email: string, password: string): Promise<AdminSession> {
-  const data = await request<AuthResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, rememberMe: true }),
-  });
+  const data = getApiData<AuthResponse>(
+    await apiClient.post('/auth/login', { email, password, rememberMe: true }),
+  );
 
   assertAdmin(data.user);
 
@@ -51,9 +41,9 @@ export async function loginAdmin(email: string, password: string): Promise<Admin
 }
 
 export async function getAdminMe(accessToken: string): Promise<AdminUser> {
-  const data = await request<{ user: AdminUser }>('/auth/me', {
-    headers: authHeaders(accessToken),
-  });
+  const data = getApiData<{ user: AdminUser }>(
+    await apiClient.get('/auth/me', { headers: authHeaders(accessToken) }),
+  );
 
   assertAdmin(data.user);
   return data.user;
@@ -68,11 +58,9 @@ export async function updateAdminProfile(
     photoUrl?: string;
   },
 ): Promise<AdminUser> {
-  const data = await request<{ user: AdminUser }>('/auth/profile', {
-    method: 'PATCH',
-    headers: authHeaders(accessToken),
-    body: JSON.stringify(profile),
-  });
+  const data = getApiData<{ user: AdminUser }>(
+    await apiClient.patch('/auth/profile', profile, { headers: authHeaders(accessToken) }),
+  );
 
   assertAdmin(data.user);
   return data.user;
@@ -94,21 +82,23 @@ export async function updateAdminProfileWithPhoto(
   if (profile.bio !== undefined) formData.append('bio', profile.bio);
   if (profile.photo) formData.append('photo', profile.photo);
 
-  const data = await requestForm<{ user: AdminUser }>('/auth/setup-profile', {
-    method: 'PATCH',
-    headers: authHeaders(accessToken),
-    body: formData,
-  });
+  const data = getApiData<{ user: AdminUser }>(
+    await apiClient.patch('/auth/setup-profile', formData, {
+      headers: {
+        ...authHeaders(accessToken),
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+  );
 
   assertAdmin(data.user);
   return data.user;
 }
 
 export async function refreshAdminSession(refreshToken: string): Promise<AdminSession> {
-  const data = await request<AuthResponse>('/auth/refresh', {
-    method: 'POST',
-    body: JSON.stringify({ refreshToken }),
-  });
+  const data = getApiData<AuthResponse>(
+    await apiClient.post('/auth/refresh', { refreshToken }),
+  );
 
   assertAdmin(data.user);
 
@@ -120,43 +110,9 @@ export async function refreshAdminSession(refreshToken: string): Promise<AdminSe
 }
 
 export async function logoutAdmin(refreshToken?: string, accessToken?: string): Promise<void> {
-  await request<{ loggedOut: boolean }>('/auth/logout', {
-    method: 'POST',
-    headers: accessToken ? authHeaders(accessToken) : undefined,
-    body: JSON.stringify({ refreshToken }),
-  }).catch(() => undefined);
-}
-
-function authHeaders(accessToken: string) {
-  return { Authorization: `Bearer ${accessToken}` };
-}
-
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init.headers || {}),
-    },
-  });
-  const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
-
-  if (!response.ok || !payload?.success) {
-    throw new Error(payload?.error?.message || payload?.message || 'Request failed.');
-  }
-
-  return payload.data;
-}
-
-async function requestForm<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
-  const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
-
-  if (!response.ok || !payload?.success) {
-    throw new Error(payload?.error?.message || payload?.message || 'Request failed.');
-  }
-
-  return payload.data;
+  await apiClient
+    .post('/auth/logout', { refreshToken }, { headers: accessToken ? authHeaders(accessToken) : undefined })
+    .catch(() => undefined);
 }
 
 function assertAdmin(user: AdminUser) {
