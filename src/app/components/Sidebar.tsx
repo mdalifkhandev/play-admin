@@ -15,6 +15,7 @@ import {
   Coins,
 } from "lucide-react";
 import { cn } from "./ui/utils";
+import logo from "../../assets/logo.png";
 
 export const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -39,8 +40,8 @@ export function Sidebar({ active, onNavigate }: { active: PageId; onNavigate: (i
   return (
     <aside className="w-60 shrink-0 bg-[#090909] border-r border-white/5 flex flex-col h-screen sticky top-0">
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/5">
-        <div className="size-8 rounded-lg bg-[#84CC16] flex items-center justify-center">
-          <img src="/icon/create1.svg" alt="Play" className="size-8" />
+        <div className="size-8 rounded-lg bg-[84CC16] flex items-center justify-center border-1 border-[#84CC16]">
+          <img src={logo} alt="Play" className="size-8" />
         </div>
         <span className="text-white font-semibold tracking-tight">Play</span>
       </div>
