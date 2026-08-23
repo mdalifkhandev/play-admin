@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { getAdminMe, loginAdmin, logoutAdmin, refreshAdminSession, type AdminSession } from "./api/auth";
 import { Toaster } from "./components/ui/sonner";
 import { NAV_ITEMS, PageId, Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
+import { LoginScreen } from "./components/LoginScreen";
 import { Dashboard } from "./pages/Dashboard";
 import { UserManagement } from "./pages/UserManagement";
 import { CreatorManagement } from "./pages/CreatorManagement";
@@ -34,16 +37,82 @@ const PAGES: Record<PageId, () => JSX.Element> = {
   settings: Settings,
 };
 
+const STORAGE_KEY = "play-admin-session";
+
 export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
+  const [session, setSession] = useState<AdminSession | null>(null);
+  const [isRestoring, setIsRestoring] = useState(true);
   const Page = PAGES[page];
   const title = NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
+
+  useEffect(() => {
+    const restore = async () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+
+      if (!stored) {
+        setIsRestoring(false);
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(stored) as AdminSession;
+        const user = await getAdminMe(parsed.accessToken);
+        setSession({ ...parsed, user });
+      } catch {
+        try {
+          const parsed = JSON.parse(stored) as AdminSession;
+          const refreshed = await refreshAdminSession(parsed.refreshToken);
+          saveSession(refreshed);
+          setSession(refreshed);
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } finally {
+        setIsRestoring(false);
+      }
+    };
+
+    void restore();
+  }, []);
+
+  const handleLogin = async (email: string, password: string) => {
+    const nextSession = await loginAdmin(email, password);
+    saveSession(nextSession);
+    setSession(nextSession);
+  };
+
+  const handleLogout = () => {
+    const currentSession = session;
+    localStorage.removeItem(STORAGE_KEY);
+    setSession(null);
+    if (currentSession) {
+      void logoutAdmin(currentSession.refreshToken, currentSession.accessToken);
+    }
+  };
+
+  if (isRestoring) {
+    return (
+      <div className="dark min-h-screen bg-[#090909] text-white flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-[#84CC16]" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <>
+        <LoginScreen onLogin={handleLogin} />
+        <Toaster theme="dark" position="top-right" />
+      </>
+    );
+  }
 
   return (
     <div className="dark size-full min-h-screen flex bg-[#090909] text-white">
       <Sidebar active={page} onNavigate={setPage} />
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar title={title} />
+        <TopBar title={title} user={session.user} onLogout={handleLogout} />
         <main className="flex-1 overflow-y-auto p-6">
           <Page />
         </main>
@@ -51,4 +120,8 @@ export default function App() {
       <Toaster theme="dark" position="top-right" />
     </div>
   );
+}
+
+function saveSession(session: AdminSession) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }

@@ -40,10 +40,9 @@ export function Sidebar({ active, onNavigate }: { active: PageId; onNavigate: (i
   return (
     <aside className="w-60 shrink-0 bg-[#090909] border-r border-white/5 flex flex-col h-screen sticky top-0">
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/5">
-        <div className="size-8 rounded-lg bg-[84CC16] flex items-center justify-center border-1 border-[#84CC16]">
-          <img src={logo} alt="Play" className="size-8" />
+        <div className="size-8 rounded-lg bg-[#84CC16] flex items-center justify-center border border-[#84CC16]">
+          <img src={logo} alt="Play" className="size-12 object-contain" />
         </div>
-        <span className="text-white font-semibold tracking-tight">Play</span>
       </div>
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
         {NAV_ITEMS.map((item) => {
