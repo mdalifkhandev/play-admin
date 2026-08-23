@@ -66,6 +66,14 @@ export async function verifyAdminUser(accessToken: string, userId: string): Prom
   return data.user;
 }
 
+export async function activateAdminUser(accessToken: string, userId: string): Promise<AdminManagedUser> {
+  const data = getApiData<{ user: AdminManagedUser }>(
+    await apiClient.patch(`/admin/users/${userId}/activate`, {}, { headers: authHeaders(accessToken) }),
+  );
+
+  return data.user;
+}
+
 export async function warnAdminUser(accessToken: string, userId: string): Promise<void> {
   await apiClient.post(`/admin/users/${userId}/warnings`, {}, { headers: authHeaders(accessToken) });
 }

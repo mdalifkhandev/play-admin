@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  activateAdminUser,
   banAdminUser,
   listAdminUsers,
   suspendAdminUser,
@@ -34,6 +35,10 @@ export function useSuspendAdminUserMutation(accessToken: string) {
 
 export function useVerifyAdminUserMutation(accessToken: string) {
   return useUserActionMutation((userId) => verifyAdminUser(accessToken, userId));
+}
+
+export function useActivateAdminUserMutation(accessToken: string) {
+  return useUserActionMutation((userId) => activateAdminUser(accessToken, userId));
 }
 
 export function useWarnAdminUserMutation(accessToken: string) {

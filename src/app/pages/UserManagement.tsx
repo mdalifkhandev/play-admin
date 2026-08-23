@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { MoreHorizontal, Search } from "lucide-react";
+import { ChevronDown, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   useAdminUsersQuery,
+  useActivateAdminUserMutation,
   useBanAdminUserMutation,
   useSuspendAdminUserMutation,
   useVerifyAdminUserMutation,
@@ -38,6 +39,7 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [selected, setSelected] = useState<AdminManagedUser | null>(null);
+  const [openActionUserId, setOpenActionUserId] = useState<string | null>(null);
 
   const queryParams = useMemo(
     () => ({ q: query, status, page, limit: pageSize }),
@@ -48,27 +50,34 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
   const suspendMutation = useSuspendAdminUserMutation(accessToken);
   const warnMutation = useWarnAdminUserMutation(accessToken);
   const verifyMutation = useVerifyAdminUserMutation(accessToken);
+  const activateMutation = useActivateAdminUserMutation(accessToken);
   const rows = usersQuery.data?.items ?? [];
   const totalPages = Math.max(1, usersQuery.data?.totalPages ?? 1);
-  const isLoading = usersQuery.isLoading || usersQuery.isFetching;
+  const isFirstLoading = usersQuery.isLoading && rows.length === 0;
+  const isRefreshing = usersQuery.isFetching && rows.length > 0;
   const isActionLoading =
     banMutation.isPending ||
     suspendMutation.isPending ||
     warnMutation.isPending ||
-    verifyMutation.isPending;
+    verifyMutation.isPending ||
+    activateMutation.isPending;
 
   const handleUserAction = (
+    targetUser: AdminManagedUser,
     action: {
       mutateAsync: (userId: string) => Promise<AdminManagedUser | void>;
     },
     successMessage: string,
+    options: { updateSheet?: boolean } = {},
   ) => {
-    if (!selected || isActionLoading) return;
+    if (isActionLoading) return;
 
     action
-      .mutateAsync(selected.id)
+      .mutateAsync(targetUser.id)
       .then((result) => {
-        if (result) {
+        setOpenActionUserId(null);
+
+        if (result && options.updateSheet) {
           setSelected(result);
         }
 
@@ -150,14 +159,17 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && (
+            {isFirstLoading && (
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableCell colSpan={6} className="text-center text-[#A0A0A0] py-8">
-                  Loading users...
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="size-4 animate-spin text-[#84CC16]" />
+                    <span>Loading users...</span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
-            {!isLoading && rows.length === 0 && (
+            {!isFirstLoading && rows.length === 0 && (
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableCell colSpan={6} className="text-center text-[#A0A0A0] py-8">
                   No users found.
@@ -167,7 +179,10 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
             {rows.map((u, i) => (
               <TableRow
                 key={u.id}
-                onClick={() => setSelected(u)}
+                onClick={() => {
+                  setOpenActionUserId(null);
+                  setSelected(u);
+                }}
                 className={`border-white/5 cursor-pointer hover:bg-white/5 ${i % 2 ? "bg-white/[0.02]" : ""}`}
               >
                 <TableCell>
@@ -185,15 +200,77 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                   <StatusPill status={u.status} />
                 </TableCell>
                 <TableCell className="text-white">{formatNumber(u.followers)}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" className="size-8 text-[#A0A0A0] hover:text-white" onClick={(e) => e.stopPropagation()}>
-                    <MoreHorizontal className="size-4" />
+                <TableCell className="relative text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 px-2.5 text-[#A0A0A0] hover:text-white hover:bg-white/5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenActionUserId((current) => (current === u.id ? null : u.id));
+                    }}
+                  >
+                    Actions
+                    <ChevronDown className="size-3.5" />
                   </Button>
+                  {openActionUserId === u.id && (
+                    <div
+                      className="absolute right-0 top-10 z-[100] w-44 rounded-md border border-white/10 bg-[#1A1A1A] p-1 text-left shadow-xl"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        disabled={isActionLoading}
+                        className="block w-full rounded-sm px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => handleUserAction(u, banMutation, "User banned successfully.")}
+                      >
+                        Ban User
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isActionLoading}
+                        className="block w-full rounded-sm px-3 py-2 text-left text-sm text-amber-400 hover:bg-amber-500/10 disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => handleUserAction(u, suspendMutation, "User suspended successfully.")}
+                      >
+                        Suspend User
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isActionLoading}
+                        className="block w-full rounded-sm px-3 py-2 text-left text-sm text-white hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => handleUserAction(u, warnMutation, "Warning sent successfully.")}
+                      >
+                        Send Warning
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isActionLoading}
+                        className="block w-full rounded-sm px-3 py-2 text-left text-sm text-[#84CC16] hover:bg-[#84CC16]/10 disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => handleUserAction(u, verifyMutation, "User verified successfully.")}
+                      >
+                        Verify Account
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isActionLoading}
+                        className="block w-full rounded-sm px-3 py-2 text-left text-sm text-[#84CC16] hover:bg-[#84CC16]/10 disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => handleUserAction(u, activateMutation, "User activated successfully.")}
+                      >
+                        Activate User
+                      </button>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        {isRefreshing && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-[#A0A0A0]">
+            <Loader2 className="size-3.5 animate-spin text-[#84CC16]" />
+            Updating users...
+          </div>
+        )}
         <Pagination page={page} total={totalPages} onChange={setPage} />
       </Panel>
 
@@ -237,7 +314,7 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(banMutation, "User banned successfully.")}
+                    onClick={() => handleUserAction(selected, banMutation, "User banned successfully.", { updateSheet: true })}
                   >
                     Ban User
                   </Button>
@@ -245,7 +322,7 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(suspendMutation, "User suspended successfully.")}
+                    onClick={() => handleUserAction(selected, suspendMutation, "User suspended successfully.", { updateSheet: true })}
                   >
                     Suspend User
                   </Button>
@@ -253,16 +330,23 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-white/15 text-white hover:bg-white/5 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(warnMutation, "Warning sent successfully.")}
+                    onClick={() => handleUserAction(selected, warnMutation, "Warning sent successfully.", { updateSheet: true })}
                   >
                     Send Warning
                   </Button>
                   <Button
                     className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(verifyMutation, "User verified successfully.")}
+                    onClick={() => handleUserAction(selected, verifyMutation, "User verified successfully.", { updateSheet: true })}
                   >
                     Verify Account
+                  </Button>
+                  <Button
+                    className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
+                    disabled={isActionLoading}
+                    onClick={() => handleUserAction(selected, activateMutation, "User activated successfully.", { updateSheet: true })}
+                  >
+                    Activate User
                   </Button>
                 </div>
               </div>
