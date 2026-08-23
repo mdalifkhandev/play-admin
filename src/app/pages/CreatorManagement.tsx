@@ -45,7 +45,7 @@ function avatarFallback(application: CreatorApplication) {
 function adminStatus(status: CreatorApplication["status"]) {
   if (status === "approved") return "Active";
   if (status === "rejected") return "Rejected";
-  if (status === "held") return "Pending";
+  if (status === "held") return "Held";
   return "Pending";
 }
 
@@ -80,13 +80,17 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
   const [perf, setPerf] = useState<CreatorApplication | null>(null);
   const [selected, setSelected] = useState<CreatorApplication | null>(null);
   const pendingQuery = useCreatorApplicationsQuery(accessToken, "pending");
+  const heldQuery = useCreatorApplicationsQuery(accessToken, "held");
   const activeQuery = useCreatorApplicationsQuery(accessToken, "approved");
+  const rejectedQuery = useCreatorApplicationsQuery(accessToken, "rejected");
   const approveMutation = useApproveCreatorApplicationMutation(accessToken);
   const rejectMutation = useRejectCreatorApplicationMutation(accessToken);
   const holdMutation = useHoldCreatorApplicationMutation(accessToken);
   const isReviewing = approveMutation.isPending || rejectMutation.isPending || holdMutation.isPending;
   const pendingCreators = pendingQuery.data?.items ?? [];
+  const heldCreators = heldQuery.data?.items ?? [];
   const activeCreators = activeQuery.data?.items ?? [];
+  const rejectedCreators = rejectedQuery.data?.items ?? [];
 
   const reviewApplication = (
     action: "approve" | "reject" | "hold",
@@ -101,7 +105,16 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
           ? "Creator application rejected."
           : "Creator application held.";
 
-    const payload = action === "approve" ? application.id : { id: application.id };
+    const reason =
+      action === "approve"
+        ? undefined
+        : window.prompt(action === "reject" ? "Reject reason" : "Hold reason", application.adminReason || "");
+
+    if (action !== "approve" && reason === null) {
+      return;
+    }
+
+    const payload = action === "approve" ? application.id : { id: application.id, reason: reason?.trim() || undefined };
 
     mutation
       .mutateAsync(payload as never)
@@ -121,122 +134,58 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
       <PageHeader title="Creator Management" subtitle="Review applications and manage active creators" />
       <Tabs defaultValue="pending">
         <TabsList className="bg-[#1A1A1A] border border-white/5">
-          <TabsTrigger value="pending">Pending Applications</TabsTrigger>
-          <TabsTrigger value="active">Active Creators</TabsTrigger>
+          <TabsTrigger value="pending">Pending Review ({pendingCreators.length})</TabsTrigger>
+          <TabsTrigger value="held">On Hold ({heldCreators.length})</TabsTrigger>
+          <TabsTrigger value="active">Active Creators ({activeCreators.length})</TabsTrigger>
+          <TabsTrigger value="rejected">Rejected ({rejectedCreators.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-4">
-          <Panel>
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/5 hover:bg-transparent">
-                  <TableHead className="text-[#A0A0A0]">Creator</TableHead>
-                  <TableHead className="text-[#A0A0A0]">Category</TableHead>
-                  <TableHead className="text-[#A0A0A0]">Country</TableHead>
-                  <TableHead className="text-[#A0A0A0]">Applied</TableHead>
-                  <TableHead className="text-[#A0A0A0] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingQuery.isLoading && (
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-8 text-center text-[#A0A0A0]">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="size-4 animate-spin text-[#84CC16]" />
-                        Loading applications...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!pendingQuery.isLoading && pendingCreators.length === 0 && (
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-8 text-center text-[#A0A0A0]">
-                      No pending applications.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {pendingCreators.map((c, i) => (
-                  <TableRow
-                    key={c.id}
-                    onClick={() => setSelected(c)}
-                    className={`border-white/5 cursor-pointer hover:bg-white/5 ${i % 2 ? "bg-white/[0.02]" : ""}`}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-8"><AvatarImage src={c.user.profile?.photoUrl} /><AvatarFallback>{avatarFallback(c)}</AvatarFallback></Avatar>
-                        <span className="text-white">{displayName(c)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-[#A0A0A0]">{c.contentCategory}</TableCell>
-                    <TableCell className="text-white">{c.country}</TableCell>
-                    <TableCell className="text-[#A0A0A0]">{new Date(c.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                        <ApproveButton disabled={isReviewing} onClick={() => reviewApplication("approve", c)}>Approve</ApproveButton>
-                        <RejectButton disabled={isReviewing} onClick={() => reviewApplication("reject", c)}>Reject</RejectButton>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Panel>
+          <CreatorApplicationTable
+            applications={pendingCreators}
+            isLoading={pendingQuery.isLoading}
+            emptyText="No pending applications."
+            isReviewing={isReviewing}
+            onSelect={setSelected}
+            onPerformance={setPerf}
+            onReview={reviewApplication}
+          />
+        </TabsContent>
+
+        <TabsContent value="held" className="mt-4">
+          <CreatorApplicationTable
+            applications={heldCreators}
+            isLoading={heldQuery.isLoading}
+            emptyText="No held applications."
+            isReviewing={isReviewing}
+            onSelect={setSelected}
+            onPerformance={setPerf}
+            onReview={reviewApplication}
+          />
         </TabsContent>
 
         <TabsContent value="active" className="mt-4">
-          <Panel>
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/5 hover:bg-transparent">
-                  <TableHead className="text-[#A0A0A0]">Creator</TableHead>
-                  <TableHead className="text-[#A0A0A0]">Category</TableHead>
-                  <TableHead className="text-[#A0A0A0]">Country</TableHead>
-                  <TableHead className="text-[#A0A0A0]">Status</TableHead>
-                  <TableHead className="text-[#A0A0A0] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activeQuery.isLoading && (
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-8 text-center text-[#A0A0A0]">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="size-4 animate-spin text-[#84CC16]" />
-                        Loading creators...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!activeQuery.isLoading && activeCreators.length === 0 && (
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-8 text-center text-[#A0A0A0]">
-                      No active creators.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {activeCreators.map((c, i) => (
-                  <TableRow key={c.id} className={`border-white/5 hover:bg-white/5 ${i % 2 ? "bg-white/[0.02]" : ""}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-8"><AvatarImage src={c.user.profile?.photoUrl} /><AvatarFallback>{avatarFallback(c)}</AvatarFallback></Avatar>
-                        <span className="text-white">{displayName(c)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-white">{c.contentCategory}</TableCell>
-                    <TableCell className="text-white">{c.country}</TableCell>
-                    <TableCell><StatusPill status={adminStatus(c.status)} /></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" className="border-white/15 text-white hover:bg-white/5 bg-transparent" onClick={() => setPerf(c)}>
-                          View Performance
-                        </Button>
-                        <RejectButton disabled={isReviewing} onClick={() => reviewApplication("hold", c)}>Hold</RejectButton>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Panel>
+          <CreatorApplicationTable
+            applications={activeCreators}
+            isLoading={activeQuery.isLoading}
+            emptyText="No active creators."
+            isReviewing={isReviewing}
+            onSelect={setSelected}
+            onPerformance={setPerf}
+            onReview={reviewApplication}
+          />
+        </TabsContent>
+
+        <TabsContent value="rejected" className="mt-4">
+          <CreatorApplicationTable
+            applications={rejectedCreators}
+            isLoading={rejectedQuery.isLoading}
+            emptyText="No rejected applications."
+            isReviewing={isReviewing}
+            onSelect={setSelected}
+            onPerformance={setPerf}
+            onReview={reviewApplication}
+          />
         </TabsContent>
       </Tabs>
 
@@ -283,8 +232,8 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <DocumentButton label="ID Front" url={selected.idFrontUrl} />
-                  <DocumentButton label="ID Back" url={selected.idBackUrl} />
+                  <DocumentPreview label="ID Front" url={selected.idFrontUrl} />
+                  <DocumentPreview label="ID Back" url={selected.idBackUrl} />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -308,6 +257,126 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
   );
 }
 
+function CreatorApplicationTable({
+  applications,
+  isLoading,
+  emptyText,
+  isReviewing,
+  onSelect,
+  onPerformance,
+  onReview,
+}: {
+  applications: CreatorApplication[];
+  isLoading: boolean;
+  emptyText: string;
+  isReviewing: boolean;
+  onSelect: (application: CreatorApplication) => void;
+  onPerformance: (application: CreatorApplication) => void;
+  onReview: (action: "approve" | "reject" | "hold", application: CreatorApplication) => void;
+}) {
+  return (
+    <Panel>
+      <Table>
+        <TableHeader>
+          <TableRow className="border-white/5 hover:bg-transparent">
+            <TableHead className="text-[#A0A0A0]">Creator</TableHead>
+            <TableHead className="text-[#A0A0A0]">Category</TableHead>
+            <TableHead className="text-[#A0A0A0]">Country</TableHead>
+            <TableHead className="text-[#A0A0A0]">Status</TableHead>
+            <TableHead className="text-[#A0A0A0]">Applied</TableHead>
+            <TableHead className="text-[#A0A0A0] text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading && (
+            <TableRow className="border-white/5 hover:bg-transparent">
+              <TableCell colSpan={6} className="py-8 text-center text-[#A0A0A0]">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="size-4 animate-spin text-[#84CC16]" />
+                  Loading creator applications...
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+          {!isLoading && applications.length === 0 && (
+            <TableRow className="border-white/5 hover:bg-transparent">
+              <TableCell colSpan={6} className="py-8 text-center text-[#A0A0A0]">
+                {emptyText}
+              </TableCell>
+            </TableRow>
+          )}
+          {applications.map((application, index) => (
+            <TableRow
+              key={application.id}
+              onClick={() => onSelect(application)}
+              className={`border-white/5 cursor-pointer hover:bg-white/5 ${index % 2 ? "bg-white/[0.02]" : ""}`}
+            >
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-8">
+                    <AvatarImage src={application.user.profile?.photoUrl} />
+                    <AvatarFallback>{avatarFallback(application)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <span className="text-white">{displayName(application)}</span>
+                    <p className="text-[#A0A0A0] text-xs">{application.user.email || application.email}</p>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="text-[#A0A0A0]">{application.contentCategory}</TableCell>
+              <TableCell className="text-white">{application.country}</TableCell>
+              <TableCell><StatusPill status={adminStatus(application.status)} /></TableCell>
+              <TableCell className="text-[#A0A0A0]">{new Date(application.createdAt).toLocaleDateString()}</TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-white/15 text-white hover:bg-white/5 bg-transparent"
+                    onClick={() => onSelect(application)}
+                  >
+                    Review
+                  </Button>
+                  {application.status === "approved" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/15 text-white hover:bg-white/5 bg-transparent"
+                      onClick={() => onPerformance(application)}
+                    >
+                      Performance
+                    </Button>
+                  ) : (
+                    <ApproveButton disabled={isReviewing} onClick={() => onReview("approve", application)}>
+                      Approve
+                    </ApproveButton>
+                  )}
+                  {application.status !== "rejected" && (
+                    <RejectButton disabled={isReviewing} onClick={() => onReview("reject", application)}>
+                      Reject
+                    </RejectButton>
+                  )}
+                  {application.status !== "held" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent"
+                      disabled={isReviewing}
+                      onClick={() => onReview("hold", application)}
+                    >
+                      Hold
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Panel>
+  );
+}
+
 function DocumentButton({ label, url }: { label: string; url?: string }) {
   if (!url) {
     return (
@@ -327,5 +396,34 @@ function DocumentButton({ label, url }: { label: string; url?: string }) {
       {label}
       <ExternalLink className="size-4" />
     </Button>
+  );
+}
+
+function DocumentPreview({ label, url }: { label: string; url?: string }) {
+  if (!url) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <p className="text-white text-sm font-semibold mb-2">{label}</p>
+        <div className="aspect-[1.58/1] rounded-lg border border-dashed border-white/15 bg-black/20 flex items-center justify-center text-sm text-[#A0A0A0]">
+          Not uploaded
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="group rounded-xl border border-white/10 bg-white/5 p-3 text-left hover:bg-white/[0.07] transition-colors"
+      onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+    >
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <p className="text-white text-sm font-semibold">{label}</p>
+        <ExternalLink className="size-4 text-[#A0A0A0] group-hover:text-white" />
+      </div>
+      <div className="aspect-[1.58/1] overflow-hidden rounded-lg bg-black/30 border border-white/10">
+        <img src={url} alt={label} className="size-full object-cover" />
+      </div>
+    </button>
   );
 }
