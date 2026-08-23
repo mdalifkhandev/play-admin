@@ -21,9 +21,8 @@ import { Notifications } from "./pages/Notifications";
 import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
 
-const PAGES: Record<PageId, () => JSX.Element> = {
+const PAGES: Record<Exclude<PageId, "users" | "adminProfile">, () => JSX.Element> = {
   dashboard: Dashboard,
-  users: UserManagement,
   creators: CreatorManagement,
   moderation: ContentModeration,
   ads: AdManagement,
@@ -36,7 +35,6 @@ const PAGES: Record<PageId, () => JSX.Element> = {
   coins: CoinGift,
   notifications: Notifications,
   settings: Settings,
-  adminProfile: Dashboard,
 };
 
 const STORAGE_KEY = "play-admin-session";
@@ -45,7 +43,7 @@ export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
-  const Page = PAGES[page];
+  const Page = page !== "users" && page !== "adminProfile" ? PAGES[page] : null;
   const title = page === "adminProfile" ? "Admin Profile" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
@@ -128,8 +126,10 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-6">
           {page === "adminProfile" ? (
             <AdminProfile accessToken={session.accessToken} user={session.user} onUserUpdate={handleUserUpdate} />
+          ) : page === "users" ? (
+            <UserManagement accessToken={session.accessToken} />
           ) : (
-            <Page />
+            Page && <Page />
           )}
         </main>
       </div>

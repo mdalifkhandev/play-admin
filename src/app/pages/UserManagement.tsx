@@ -1,5 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MoreHorizontal, Search } from "lucide-react";
+import { toast } from "sonner";
+import {
+  banAdminUser,
+  listAdminUsers,
+  suspendAdminUser,
+  verifyAdminUser,
+  warnAdminUser,
+  type AdminManagedUser,
+} from "../api/adminUsers";
 import { PageHeader, Panel, Pagination, StatusPill } from "../components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
@@ -18,29 +27,76 @@ import {
   SheetTitle,
 } from "../components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { AdminUser, formatNumber, users } from "../data";
+import { formatNumber } from "../data";
 
 const PAGE_SIZE = 8;
 
-export function UserManagement() {
+export function UserManagement({ accessToken }: { accessToken: string }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<AdminUser | null>(null);
+  const [rows, setRows] = useState<AdminManagedUser[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selected, setSelected] = useState<AdminManagedUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const filtered = useMemo(
-    () =>
-      users.filter(
-        (u) =>
-          (status === "all" || u.status.toLowerCase() === status) &&
-          (u.username.toLowerCase().includes(query.toLowerCase()) ||
-            u.email.toLowerCase().includes(query.toLowerCase())),
-      ),
-    [query, status],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+      listAdminUsers(accessToken, {
+        q: query,
+        status,
+        page,
+        limit: PAGE_SIZE,
+      })
+        .then((result) => {
+          if (cancelled) return;
+          setRows(result.items);
+          setTotalPages(Math.max(1, result.totalPages));
+        })
+        .catch((error: Error) => {
+          if (cancelled) return;
+          toast.error(error.message || "Failed to load users.");
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+    }, 250);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [accessToken, page, query, status]);
+
+  const updateSelectedUser = (user: AdminManagedUser) => {
+    setRows((current) => current.map((item) => (item.id === user.id ? user : item)));
+    setSelected(user);
+  };
+
+  const handleUserAction = async (
+    action: (token: string, userId: string) => Promise<AdminManagedUser> | Promise<void>,
+    successMessage: string,
+  ) => {
+    if (!selected || isActionLoading) return;
+
+    try {
+      setIsActionLoading(true);
+      const result = await action(accessToken, selected.id);
+
+      if (result) {
+        updateSelectedUser(result);
+      }
+
+      toast.success(successMessage);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Action failed.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -95,6 +151,20 @@ export function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {isLoading && (
+              <TableRow className="border-white/5 hover:bg-transparent">
+                <TableCell colSpan={6} className="text-center text-[#A0A0A0] py-8">
+                  Loading users...
+                </TableCell>
+              </TableRow>
+            )}
+            {!isLoading && rows.length === 0 && (
+              <TableRow className="border-white/5 hover:bg-transparent">
+                <TableCell colSpan={6} className="text-center text-[#A0A0A0] py-8">
+                  No users found.
+                </TableCell>
+              </TableRow>
+            )}
             {rows.map((u, i) => (
               <TableRow
                 key={u.id}
@@ -164,10 +234,37 @@ export function UserManagement() {
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent">Ban User</Button>
-                  <Button variant="outline" className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent">Suspend User</Button>
-                  <Button variant="outline" className="border-white/15 text-white hover:bg-white/5 bg-transparent">Send Warning</Button>
-                  <Button className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90">Verify Account</Button>
+                  <Button
+                    variant="outline"
+                    className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent"
+                    disabled={isActionLoading}
+                    onClick={() => handleUserAction(banAdminUser, "User banned successfully.")}
+                  >
+                    Ban User
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent"
+                    disabled={isActionLoading}
+                    onClick={() => handleUserAction(suspendAdminUser, "User suspended successfully.")}
+                  >
+                    Suspend User
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-white/15 text-white hover:bg-white/5 bg-transparent"
+                    disabled={isActionLoading}
+                    onClick={() => handleUserAction(warnAdminUser, "Warning sent successfully.")}
+                  >
+                    Send Warning
+                  </Button>
+                  <Button
+                    className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
+                    disabled={isActionLoading}
+                    onClick={() => handleUserAction(verifyAdminUser, "User verified successfully.")}
+                  >
+                    Verify Account
+                  </Button>
                 </div>
               </div>
             </>
