@@ -7,6 +7,7 @@ export type AdminUser = {
   profile?: {
     displayName?: string;
     username?: string;
+    bio?: string;
     photoUrl?: string;
   };
 };
@@ -58,6 +59,51 @@ export async function getAdminMe(accessToken: string): Promise<AdminUser> {
   return data.user;
 }
 
+export async function updateAdminProfile(
+  accessToken: string,
+  profile: {
+    displayName?: string;
+    username?: string;
+    bio?: string;
+    photoUrl?: string;
+  },
+): Promise<AdminUser> {
+  const data = await request<{ user: AdminUser }>('/auth/profile', {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(profile),
+  });
+
+  assertAdmin(data.user);
+  return data.user;
+}
+
+export async function updateAdminProfileWithPhoto(
+  accessToken: string,
+  profile: {
+    displayName?: string;
+    username?: string;
+    bio?: string;
+    photo?: File;
+  },
+): Promise<AdminUser> {
+  const formData = new FormData();
+
+  if (profile.username !== undefined) formData.append('username', profile.username);
+  if (profile.displayName !== undefined) formData.append('displayName', profile.displayName);
+  if (profile.bio !== undefined) formData.append('bio', profile.bio);
+  if (profile.photo) formData.append('photo', profile.photo);
+
+  const data = await requestForm<{ user: AdminUser }>('/auth/setup-profile', {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: formData,
+  });
+
+  assertAdmin(data.user);
+  return data.user;
+}
+
 export async function refreshAdminSession(refreshToken: string): Promise<AdminSession> {
   const data = await request<AuthResponse>('/auth/refresh', {
     method: 'POST',
@@ -93,6 +139,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers || {}),
     },
   });
+  const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
+
+  if (!response.ok || !payload?.success) {
+    throw new Error(payload?.error?.message || payload?.message || 'Request failed.');
+  }
+
+  return payload.data;
+}
+
+async function requestForm<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
 
   if (!response.ok || !payload?.success) {

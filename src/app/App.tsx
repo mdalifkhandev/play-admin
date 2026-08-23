@@ -19,6 +19,7 @@ import { KidsMode } from "./pages/KidsMode";
 import { CoinGift } from "./pages/CoinGift";
 import { Notifications } from "./pages/Notifications";
 import { Settings } from "./pages/Settings";
+import { AdminProfile } from "./pages/AdminProfile";
 
 const PAGES: Record<PageId, () => JSX.Element> = {
   dashboard: Dashboard,
@@ -35,6 +36,7 @@ const PAGES: Record<PageId, () => JSX.Element> = {
   coins: CoinGift,
   notifications: Notifications,
   settings: Settings,
+  adminProfile: Dashboard,
 };
 
 const STORAGE_KEY = "play-admin-session";
@@ -44,7 +46,7 @@ export default function App() {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const Page = PAGES[page];
-  const title = NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
+  const title = page === "adminProfile" ? "Admin Profile" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
     const restore = async () => {
@@ -91,6 +93,16 @@ export default function App() {
     }
   };
 
+  const handleUserUpdate = (user: AdminSession["user"]) => {
+    if (!session) {
+      return;
+    }
+
+    const nextSession = { ...session, user };
+    saveSession(nextSession);
+    setSession(nextSession);
+  };
+
   if (isRestoring) {
     return (
       <div className="dark min-h-screen bg-[#090909] text-white flex items-center justify-center">
@@ -112,9 +124,13 @@ export default function App() {
     <div className="dark size-full min-h-screen flex bg-[#090909] text-white">
       <Sidebar active={page} onNavigate={setPage} />
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar title={title} user={session.user} onLogout={handleLogout} />
+        <TopBar title={title} user={session.user} onLogout={handleLogout} onProfileClick={() => setPage("adminProfile")} />
         <main className="flex-1 overflow-y-auto p-6">
-          <Page />
+          {page === "adminProfile" ? (
+            <AdminProfile accessToken={session.accessToken} user={session.user} onUserUpdate={handleUserUpdate} />
+          ) : (
+            <Page />
+          )}
         </main>
       </div>
       <Toaster theme="dark" position="top-right" />
