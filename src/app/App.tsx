@@ -21,9 +21,8 @@ import { Notifications } from "./pages/Notifications";
 import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
 
-const PAGES: Record<Exclude<PageId, "users" | "adminProfile">, () => JSX.Element> = {
+const PAGES: Record<Exclude<PageId, "users" | "creators" | "adminProfile">, () => JSX.Element> = {
   dashboard: Dashboard,
-  creators: CreatorManagement,
   moderation: ContentModeration,
   ads: AdManagement,
   monetization: Monetization,
@@ -43,7 +42,7 @@ export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
-  const Page = page !== "users" && page !== "adminProfile" ? PAGES[page] : null;
+  const Page = page !== "users" && page !== "creators" && page !== "adminProfile" ? PAGES[page] : null;
   const title = page === "adminProfile" ? "Admin Profile" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
@@ -128,6 +127,8 @@ export default function App() {
             <AdminProfile accessToken={session.accessToken} user={session.user} onUserUpdate={handleUserUpdate} />
           ) : page === "users" ? (
             <UserManagement accessToken={session.accessToken} />
+          ) : page === "creators" ? (
+            <CreatorManagement accessToken={session.accessToken} />
           ) : (
             Page && <Page />
           )}
