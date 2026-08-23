@@ -31,6 +31,17 @@ export default defineConfig({
     },
   },
 
+  server: {
+    watch: {
+      ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/.pnpm-store/**',
+        '**/dist/**',
+      ],
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
