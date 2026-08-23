@@ -46,8 +46,8 @@ export function useWarnAdminUserMutation(accessToken: string) {
 
   return useMutation({
     mutationFn: (userId: string) => warnAdminUser(accessToken, userId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all, refetchType: 'all' });
     },
   });
 }
@@ -57,8 +57,8 @@ function useUserActionMutation(action: (userId: string) => Promise<AdminManagedU
 
   return useMutation({
     mutationFn: action,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all, refetchType: 'all' });
     },
   });
 }

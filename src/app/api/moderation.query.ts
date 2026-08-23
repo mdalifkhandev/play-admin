@@ -32,8 +32,8 @@ export function useReviewModerationReportMutation(accessToken: string) {
   return useMutation({
     mutationFn: ({ reportId, action, reason }: { reportId: string; action: ModerationAction; reason?: string }) =>
       reviewModerationReport(accessToken, reportId, action, reason),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all, refetchType: 'all' });
     },
   });
 }

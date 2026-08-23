@@ -37,8 +37,8 @@ export function useReviewAdminAdMutation(accessToken: string) {
       action: 'approve' | 'reject' | 'hold' | 'pause' | 'resume' | 'cancel';
       reason?: string;
     }) => reviewAdminAd(accessToken, adId, action, reason),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adQueryKeys.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adQueryKeys.all, refetchType: 'all' });
     },
   });
 }
