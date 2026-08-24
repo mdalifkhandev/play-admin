@@ -34,7 +34,7 @@ export const NAV_ITEMS = [
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
 
-export type PageId = (typeof NAV_ITEMS)[number]["id"] | "adminProfile";
+export type PageId = (typeof NAV_ITEMS)[number]["id"] | "adminProfile" | "adminNotifications";
 
 export function Sidebar({ active, onNavigate }: { active: PageId; onNavigate: (id: PageId) => void }) {
   return (

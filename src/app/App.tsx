@@ -20,8 +20,9 @@ import { CoinGift } from "./pages/CoinGift";
 import { Notifications } from "./pages/Notifications";
 import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
+import { AdminNotifications } from "./pages/AdminNotifications";
 
-const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "adminProfile">, () => JSX.Element> = {
+const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "adminProfile" | "adminNotifications">, () => JSX.Element> = {
   dashboard: Dashboard,
   withdrawals: Withdrawals,
   subscriptions: Subscriptions,
@@ -39,8 +40,8 @@ export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
-  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "adminProfile" ? PAGES[page] : null;
-  const title = page === "adminProfile" ? "Admin Profile" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
+  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "adminProfile" && page !== "adminNotifications" ? PAGES[page] : null;
+  const title = page === "adminProfile" ? "Admin Profile" : page === "adminNotifications" ? "Admin Notifications" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
     const restore = async () => {
@@ -118,10 +119,20 @@ export default function App() {
     <div className="dark size-full min-h-screen flex bg-[#090909] text-white">
       <Sidebar active={page} onNavigate={setPage} />
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar title={title} user={session.user} onLogout={handleLogout} onProfileClick={() => setPage("adminProfile")} />
+        <TopBar
+          title={title}
+          user={session.user}
+          accessToken={session.accessToken}
+          onLogout={handleLogout}
+          onProfileClick={() => setPage("adminProfile")}
+          onNotificationsClick={() => setPage("adminNotifications")}
+          onNotificationNavigate={setPage}
+        />
         <main className="flex-1 overflow-y-auto p-6">
           {page === "adminProfile" ? (
             <AdminProfile accessToken={session.accessToken} user={session.user} onUserUpdate={handleUserUpdate} />
+          ) : page === "adminNotifications" ? (
+            <AdminNotifications accessToken={session.accessToken} onNotificationNavigate={setPage} />
           ) : page === "users" ? (
             <UserManagement accessToken={session.accessToken} />
           ) : page === "creators" ? (
