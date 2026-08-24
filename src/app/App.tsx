@@ -22,9 +22,8 @@ import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
 import { AdminNotifications } from "./pages/AdminNotifications";
 
-const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "adminProfile" | "adminNotifications">, () => JSX.Element> = {
+const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "withdrawals" | "adminProfile" | "adminNotifications">, () => JSX.Element> = {
   dashboard: Dashboard,
-  withdrawals: Withdrawals,
   subscriptions: Subscriptions,
   rewards: Rewards,
   live: LiveManagement,
@@ -40,7 +39,7 @@ export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
-  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "adminProfile" && page !== "adminNotifications" ? PAGES[page] : null;
+  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "withdrawals" && page !== "adminProfile" && page !== "adminNotifications" ? PAGES[page] : null;
   const title = page === "adminProfile" ? "Admin Profile" : page === "adminNotifications" ? "Admin Notifications" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
@@ -71,6 +70,33 @@ export default function App() {
     };
 
     void restore();
+  }, []);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      localStorage.removeItem(STORAGE_KEY);
+      setSession(null);
+    };
+
+    const handleSessionRefreshed = () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return;
+
+      try {
+        setSession(JSON.parse(stored) as AdminSession);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+        setSession(null);
+      }
+    };
+
+    window.addEventListener("play-admin-session-expired", handleSessionExpired);
+    window.addEventListener("play-admin-session-refreshed", handleSessionRefreshed);
+
+    return () => {
+      window.removeEventListener("play-admin-session-expired", handleSessionExpired);
+      window.removeEventListener("play-admin-session-refreshed", handleSessionRefreshed);
+    };
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
@@ -143,6 +169,8 @@ export default function App() {
             <AdManagement accessToken={session.accessToken} />
           ) : page === "monetization" ? (
             <Monetization accessToken={session.accessToken} />
+          ) : page === "withdrawals" ? (
+            <Withdrawals accessToken={session.accessToken} />
           ) : (
             Page && <Page />
           )}
