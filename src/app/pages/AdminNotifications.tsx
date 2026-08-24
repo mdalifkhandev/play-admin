@@ -52,6 +52,20 @@ export function AdminNotifications({
     }
   };
 
+  const markNotificationAsRead = async (notification: AdminNotification) => {
+    if (notification.isRead || !notification.id) return;
+
+    setItems((current) =>
+      current.map((item) => (item.id === notification.id ? { ...item, isRead: true } : item)),
+    );
+    try {
+      await markAdminNotificationsAsRead(accessToken, [notification.id]);
+    } catch (error) {
+      toast.error(handleApiError(error, "Failed to mark notification as read."));
+      void loadNotifications();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -99,7 +113,10 @@ export function AdminNotifications({
               <button
                 type="button"
                 key={item.id}
-                onClick={() => onNotificationNavigate(pageForAdminNotification(item))}
+                onClick={() => {
+                  void markNotificationAsRead(item);
+                  onNotificationNavigate(pageForAdminNotification(item));
+                }}
                 className={`flex w-full gap-4 py-4 text-left transition-colors hover:bg-white/[0.03] ${item.isRead ? "opacity-70" : ""}`}
               >
                 <div className={`mt-1 size-2.5 shrink-0 rounded-full ${item.isRead ? "bg-white/20" : "bg-[#84CC16]"}`} />

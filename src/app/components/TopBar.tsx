@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bell, Loader2, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { AdminUser } from "../api/auth";
+import { flattenAdminSearchResults, searchAdmin, type AdminSearchItem } from "../api/adminSearch";
 import { getAdminNotifications, markAdminNotificationsAsRead, type AdminNotification } from "../api/notifications";
 import { handleApiError } from "../api/client";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -29,6 +30,10 @@ export function TopBar({
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchItems, setSearchItems] = useState<AdminSearchItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const displayName = user.profile?.displayName || user.profile?.username || user.email.split("@")[0] || "Admin";
   const unreadCount = useMemo(() => notifications.filter((item) => !item.isRead).length, [notifications]);
   const initials = displayName
@@ -59,13 +64,38 @@ export function TopBar({
     return () => window.clearInterval(timer);
   }, [accessToken]);
 
-  const markVisibleAsRead = async () => {
-    const unreadIds = notifications.filter((item) => !item.isRead).map((item) => item.id).filter(Boolean);
-    if (unreadIds.length === 0) return;
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchItems([]);
+      setIsSearching(false);
+      return;
+    }
 
-    setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const result = await searchAdmin(accessToken, query, 5);
+        setSearchItems(flattenAdminSearchResults(result));
+        setIsSearchOpen(true);
+      } catch (error) {
+        toast.error(handleApiError(error, "Search failed."));
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [accessToken, searchQuery]);
+
+  const markNotificationAsRead = async (notification: AdminNotification) => {
+    if (notification.isRead || !notification.id) return;
+
+    setNotifications((current) =>
+      current.map((item) => (item.id === notification.id ? { ...item, isRead: true } : item)),
+    );
     try {
-      await markAdminNotificationsAsRead(accessToken, unreadIds);
+      await markAdminNotificationsAsRead(accessToken, [notification.id]);
     } catch (error) {
       toast.error(handleApiError(error, "Failed to mark notifications as read."));
       void loadNotifications();
@@ -76,9 +106,14 @@ export function TopBar({
     setIsOpen(nextOpen);
     if (nextOpen) {
       void loadNotifications();
-    } else {
-      void markVisibleAsRead();
     }
+  };
+
+  const handleSearchNavigate = (item: AdminSearchItem) => {
+    setSearchQuery("");
+    setSearchItems([]);
+    setIsSearchOpen(false);
+    onNotificationNavigate(item.adminPage);
   };
 
   return (
@@ -89,12 +124,56 @@ export function TopBar({
         <span className="text-white">{title}</span>
       </div>
       <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center gap-2 bg-[#1A1A1A] border border-white/5 rounded-lg px-3 h-9 w-64">
-          <Search className="size-4 text-[#A0A0A0]" />
-          <input
-            placeholder="Search anything..."
-            className="bg-transparent outline-none text-sm text-white placeholder:text-[#A0A0A0] w-full"
-          />
+        <div className="relative hidden md:block">
+          <div className="flex items-center gap-2 bg-[#1A1A1A] border border-white/5 rounded-lg px-3 h-9 w-64">
+            <Search className="size-4 text-[#A0A0A0]" />
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onFocus={() => {
+                if (searchQuery.trim().length >= 2) setIsSearchOpen(true);
+              }}
+              onBlur={() => {
+                window.setTimeout(() => setIsSearchOpen(false), 150);
+              }}
+              placeholder="Search anything..."
+              className="bg-transparent outline-none text-sm text-white placeholder:text-[#A0A0A0] w-full"
+            />
+            {isSearching && <Loader2 className="size-4 animate-spin text-[#84CC16]" />}
+          </div>
+          {isSearchOpen && searchQuery.trim().length >= 2 && (
+            <div className="absolute right-0 top-11 z-50 w-96 overflow-hidden rounded-xl border border-white/10 bg-[#111] shadow-2xl">
+              {searchItems.length === 0 ? (
+                <div className="px-4 py-6 text-center text-sm text-[#A0A0A0]">
+                  {isSearching ? "Searching..." : "No results found."}
+                </div>
+              ) : (
+                <div className="max-h-96 overflow-y-auto py-2">
+                  {searchItems.map((item) => (
+                    <button
+                      type="button"
+                      key={`${item.type}-${item.id}`}
+                      onClick={() => handleSearchNavigate(item)}
+                      className="w-full px-4 py-3 text-left transition-colors hover:bg-white/5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-[#84CC16]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#84CC16]">
+                              {item.type}
+                            </span>
+                            {item.status && <span className="truncate text-xs text-[#A0A0A0]">{item.status}</span>}
+                          </div>
+                          <p className="mt-1 truncate text-sm font-semibold text-white">{item.title}</p>
+                          {item.subtitle && <p className="mt-0.5 line-clamp-1 text-xs text-[#A0A0A0]">{item.subtitle}</p>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <Popover open={isOpen} onOpenChange={handleOpenChange}>
           <PopoverTrigger asChild>
@@ -124,6 +203,7 @@ export function TopBar({
                     type="button"
                     key={item.id}
                     onClick={() => {
+                      void markNotificationAsRead(item);
                       setIsOpen(false);
                       onNotificationNavigate(pageForAdminNotification(item));
                     }}
