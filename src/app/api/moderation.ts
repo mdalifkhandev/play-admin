@@ -1,6 +1,6 @@
 import { apiClient, authHeaders, getApiData } from './client';
 
-export type ModerationTargetType = 'reel' | 'comment' | 'user' | 'profile';
+export type ModerationTargetType = 'reel' | 'comment' | 'user' | 'profile' | 'live_stream';
 export type ModerationReportStatus = 'pending' | 'resolved' | 'rejected';
 export type ModerationAction = 'keep' | 'remove' | 'warn' | 'suspend' | 'ban';
 

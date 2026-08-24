@@ -15,6 +15,7 @@ const targetLabels: Record<ModerationTargetType, string> = {
   comment: "Comments",
   user: "Users",
   profile: "Profiles",
+  live_stream: "Live Streams",
 };
 
 export function ContentModeration({ accessToken }: { accessToken: string }) {
