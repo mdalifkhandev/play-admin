@@ -101,7 +101,7 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
           <TabsTrigger value="pending">
             Pending Requests ({pendingQuery.data?.pagination.total ?? 0})
           </TabsTrigger>
-          <TabsTrigger value="kyc">KYC Verification</TabsTrigger>
+          {/* <TabsTrigger value="kyc">KYC Verification</TabsTrigger> */}
           <TabsTrigger value="history">
             History ({historyQuery.data?.pagination.total ?? 0})
           </TabsTrigger>
