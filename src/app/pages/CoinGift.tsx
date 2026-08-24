@@ -55,7 +55,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
   const updateSettingsMutation = useUpdateAdminCoinSettingsMutation(accessToken);
 
   const [packageDrafts, setPackageDrafts] = useState<Record<string, AdminCoinPackage>>({});
-  const [giftDrafts, setGiftDrafts] = useState<Record<string, AdminGift>>({});
   const [packageModalOpen, setPackageModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<AdminCoinPackage | null>(null);
   const [packageToDelete, setPackageToDelete] = useState<AdminCoinPackage | null>(null);
@@ -63,9 +62,17 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
   const [packageActionId, setPackageActionId] = useState<string | null>(null);
   const [packageActionType, setPackageActionType] = useState<'save' | 'popular' | 'delete' | null>(null);
   const [giftActionId, setGiftActionId] = useState<string | null>(null);
+  const [giftActionType, setGiftActionType] = useState<'save' | 'delete' | null>(null);
+  const [giftModalOpen, setGiftModalOpen] = useState(false);
+  const [editingGift, setEditingGift] = useState<AdminGift | null>(null);
   const [packageForm, setPackageForm] = useState({
     coins: "100",
     price: "0.99",
+  });
+  const [giftForm, setGiftForm] = useState({
+    name: "Gift",
+    icon: "gift",
+    coinPrice: "10",
   });
   const [creatorShare, setCreatorShare] = useState("70");
   const [conversion, setConversion] = useState("100");
@@ -78,10 +85,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
   useEffect(() => {
     setPackageDrafts(Object.fromEntries(packages.map((p) => [p.id, p])));
   }, [packages]);
-
-  useEffect(() => {
-    setGiftDrafts(Object.fromEntries(gifts.map((g) => [g.id, g])));
-  }, [gifts]);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -125,25 +128,43 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
     setPackageModalOpen(true);
   };
 
-  const updateGiftDraft = (id: string, input: Partial<AdminGift>) => {
-    setGiftDrafts((current) => ({
-      ...current,
-      [id]: { ...current[id], ...input },
-    }));
-  };
-
   const saveGift = (id: string, input?: Partial<AdminGift>) => {
-    const draft = giftDrafts[id];
-    if (!draft && !input) return;
+    const draft = gifts.find((gift) => gift.id === id);
+    const payload = input ?? draft;
+    if (!payload) return;
     setGiftActionId(id);
+    setGiftActionType('save');
     updateGiftMutation.mutate(
-      { giftId: id, input: input ?? draft },
+      { giftId: id, input: payload },
       {
         onSuccess: () => toast.success("Gift saved"),
         onError: () => toast.error("Gift could not be saved"),
-        onSettled: () => setGiftActionId(null),
+        onSettled: () => {
+          setGiftActionId(null);
+          setGiftActionType(null);
+        },
       },
     );
+  };
+
+  const openAddGiftModal = () => {
+    setEditingGift(null);
+    setGiftForm({
+      name: "Gift",
+      icon: "gift",
+      coinPrice: "10",
+    });
+    setGiftModalOpen(true);
+  };
+
+  const openEditGiftModal = (gift: AdminGift) => {
+    setEditingGift(gift);
+    setGiftForm({
+      name: gift.name,
+      icon: gift.icon,
+      coinPrice: String(gift.coinPrice),
+    });
+    setGiftModalOpen(true);
   };
 
   const saveSettings = () => {
@@ -233,26 +254,81 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
     );
   };
 
-  const addGift = () => {
+  const saveGiftModal = () => {
+    const name = giftForm.name.trim();
+    const icon = giftForm.icon.trim();
+    const coinPrice = Number(giftForm.coinPrice);
+
+    if (!name) {
+      toast.error("Gift name is required");
+      return;
+    }
+
+    if (!icon) {
+      toast.error("Gift icon is required");
+      return;
+    }
+
+    if (!Number.isFinite(coinPrice) || coinPrice <= 0) {
+      toast.error("Coin cost must be greater than 0");
+      return;
+    }
+
+    if (editingGift) {
+      setGiftActionId(editingGift.id);
+      setGiftActionType('save');
+      updateGiftMutation.mutate(
+        {
+          giftId: editingGift.id,
+          input: {
+            name,
+            icon,
+            coinPrice,
+          },
+        },
+        {
+          onSuccess: async () => {
+            toast.success("Gift saved");
+            setGiftModalOpen(false);
+            setEditingGift(null);
+            await giftsQuery.refetch();
+          },
+          onError: (error) => {
+            toast.error(handleApiError(error, "Gift could not be saved"));
+          },
+          onSettled: () => {
+            setGiftActionId(null);
+            setGiftActionType(null);
+          },
+        },
+      );
+      return;
+    }
+
     setGiftActionId("new");
+    setGiftActionType('save');
     createGiftMutation.mutate(
       {
-        name: `Gift ${gifts.length + 1}`,
+        name,
         code: `gift-${Date.now()}`,
-        icon: "gift",
-        coinPrice: 10,
+        icon,
+        coinPrice,
         isActive: true,
         sortOrder: gifts.length + 1,
       },
       {
         onSuccess: async () => {
           toast.success("New gift added");
+          setGiftModalOpen(false);
           await giftsQuery.refetch();
         },
         onError: (error) => {
           toast.error(handleApiError(error, "Gift could not be added"));
         },
-        onSettled: () => setGiftActionId(null),
+        onSettled: () => {
+          setGiftActionId(null);
+          setGiftActionType(null);
+        },
       },
     );
   };
@@ -280,6 +356,7 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
   const deleteGift = () => {
     if (!giftToDelete) return;
     setGiftActionId(giftToDelete.id);
+    setGiftActionType('delete');
     deleteGiftMutation.mutate(giftToDelete.id, {
       onSuccess: async () => {
         toast.success("Gift deleted");
@@ -289,7 +366,10 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
       onError: (error) => {
         toast.error(handleApiError(error, "Gift could not be deleted"));
       },
-      onSettled: () => setGiftActionId(null),
+      onSettled: () => {
+        setGiftActionId(null);
+        setGiftActionType(null);
+      },
     });
   };
 
@@ -432,7 +512,7 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
               <AddButton
                 label={createGiftMutation.isPending ? "Adding..." : "Add New Gift"}
                 disabled={giftActionId === "new"}
-                onClick={addGift}
+                onClick={openAddGiftModal}
               />
             }
           >
@@ -446,8 +526,9 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {gifts.map((g) => {
-                  const draft = giftDrafts[g.id] ?? g;
                   const isGiftActionLoading = giftActionId === g.id;
+                  const isGiftSaving = isGiftActionLoading && giftActionType === 'save';
+                  const isGiftDeleting = isGiftActionLoading && giftActionType === 'delete';
                   return (
                     <div key={g.id} className="rounded-xl bg-white/5 border border-white/5 p-4 space-y-3">
                       <div className="flex items-center justify-between">
@@ -455,41 +536,36 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={g.isActive}
-                            disabled={isGiftActionLoading}
+                            disabled={isGiftSaving}
                             onCheckedChange={(v) => saveGift(g.id, { isActive: v })}
                           />
                           <Button
                             variant="outline"
                             size="icon"
+                            className="size-8 border-white/10 bg-transparent hover:bg-white/5"
+                            disabled={isGiftSaving || isGiftDeleting}
+                            onClick={() => openEditGiftModal(g)}
+                          >
+                            {isGiftSaving ? <Loader2 className="size-4 animate-spin" /> : <Edit3 className="size-4" />}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
                             className="size-8 border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent"
-                            disabled={isGiftActionLoading}
+                            disabled={isGiftDeleting}
                             onClick={() => setGiftToDelete(g)}
                           >
-                            {isGiftActionLoading ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                            {isGiftDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                           </Button>
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[#A0A0A0] text-xs">Gift Name</Label>
-                        <Input
-                          value={draft.name}
-                          onChange={(e) => updateGiftDraft(g.id, { name: e.target.value })}
-                          onBlur={() => saveGift(g.id)}
-                          className="bg-[#141414] border-white/10 text-white"
-                        />
+                        <p className="text-white font-semibold">{g.name}</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[#A0A0A0] text-xs">Coin Cost</Label>
-                        <div className="flex items-center bg-[#141414] border border-white/10 rounded-md h-9 px-3">
-                          <input
-                            value={draft.coinPrice}
-                            onChange={(e) => updateGiftDraft(g.id, { coinPrice: Number(e.target.value) || 0 })}
-                            onBlur={() => saveGift(g.id)}
-                            inputMode="numeric"
-                            className="bg-transparent outline-none text-white w-full"
-                          />
-                          <span className="text-[#A0A0A0] ml-1 text-sm">coins</span>
-                        </div>
+                        <p className="text-white font-semibold">{g.coinPrice.toLocaleString()} coins</p>
                       </div>
                       <StatusPill status={g.isActive ? "Active" : "Cancelled"} />
                     </div>
@@ -631,6 +707,64 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
               onClick={savePackageModal}
             >
               {packageActionType === 'save' ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={giftModalOpen} onOpenChange={setGiftModalOpen}>
+        <DialogContent className="bg-[#1A1A1A] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>{editingGift ? "Edit Gift" : "Add Gift"}</DialogTitle>
+            <DialogDescription className="text-[#A0A0A0]">
+              Set the gift name, icon and coin cost.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[#A0A0A0]">Gift Name</Label>
+              <Input
+                value={giftForm.name}
+                onChange={(event) => setGiftForm((current) => ({ ...current, name: event.target.value }))}
+                className="bg-[#141414] border-white/10 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#A0A0A0]">Gift Icon</Label>
+              <Input
+                value={giftForm.icon}
+                onChange={(event) => setGiftForm((current) => ({ ...current, icon: event.target.value }))}
+                className="bg-[#141414] border-white/10 text-white"
+                placeholder="rose, crown, 💎"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#A0A0A0]">Coin Cost</Label>
+              <div className="flex items-center bg-[#141414] border border-white/10 rounded-md h-10 px-3">
+                <Input
+                  value={giftForm.coinPrice}
+                  onChange={(event) => setGiftForm((current) => ({ ...current, coinPrice: event.target.value }))}
+                  inputMode="numeric"
+                  className="bg-transparent border-0 p-0 text-white focus-visible:ring-0"
+                />
+                <span className="text-[#A0A0A0] ml-2 whitespace-nowrap text-sm">coins</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-white/10 bg-transparent hover:bg-white/5"
+              onClick={() => setGiftModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#84CC16] text-black font-bold hover:bg-[#84CC16]/90"
+              disabled={giftActionType === 'save'}
+              onClick={saveGiftModal}
+            >
+              {giftActionType === 'save' ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
