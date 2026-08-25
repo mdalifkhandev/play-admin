@@ -13,6 +13,7 @@ import {
   Settings,
   Baby,
   Coins,
+  FileText,
 } from "lucide-react";
 import { cn } from "./ui/utils";
 import logo from "../../assets/logo.png";
@@ -22,6 +23,7 @@ export const NAV_ITEMS = [
   { id: "users", label: "User Management", icon: Users },
   { id: "creators", label: "Creator Management", icon: Star },
   { id: "moderation", label: "Content Moderation", icon: ShieldAlert },
+  { id: "content", label: "Content Management", icon: FileText },
   { id: "ads", label: "Ad Management", icon: Megaphone },
   { id: "monetization", label: "Monetization & Revenue", icon: DollarSign },
   { id: "withdrawals", label: "Withdrawal Management", icon: Wallet },

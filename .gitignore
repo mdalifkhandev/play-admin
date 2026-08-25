@@ -8,8 +8,6 @@ build/
 .vite/
 
 # Local environment
-.env
-.env.*
 !.env.example
 
 # Logs
