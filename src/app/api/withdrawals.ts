@@ -19,6 +19,7 @@ export type AdminWithdrawalUser = {
 export type AdminWithdrawal = {
   id: string;
   user: AdminWithdrawalUser | string;
+  withdrawalType?: 'coins' | 'earnings' | string;
   coins: number;
   coinsPerDollar: number;
   amountUsd: number;

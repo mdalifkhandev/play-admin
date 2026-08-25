@@ -286,7 +286,9 @@ function WithdrawalTable({
                 </div>
               </TableCell>
               <TableCell className="text-white">{formatMoney(withdrawal.amountUsd)}</TableCell>
-              <TableCell className="text-[#A0A0A0]">{withdrawal.coins.toLocaleString()}</TableCell>
+              <TableCell className="text-[#A0A0A0]">
+                {withdrawal.withdrawalType === "earnings" ? "Earnings" : withdrawal.coins.toLocaleString()}
+              </TableCell>
               <TableCell className="text-[#A0A0A0]">{formatDate(withdrawal.createdAt)}</TableCell>
               <TableCell className="text-[#A0A0A0]">{displayMethod(withdrawal)}</TableCell>
               <TableCell><StatusPill status={displayStatus(withdrawal.status)} /></TableCell>

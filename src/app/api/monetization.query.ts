@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   getMonetizationDashboard,
+  releasePendingCreatorEarnings,
   updateCreatorRequirementSettings,
   updateMonetizationSettings,
   type CreatorRequirementSettings,
@@ -18,6 +19,17 @@ export function useMonetizationDashboardQuery(accessToken: string) {
     queryFn: () => getMonetizationDashboard(accessToken),
     enabled: Boolean(accessToken),
     staleTime: 15_000,
+  });
+}
+
+export function useReleasePendingCreatorEarningsMutation(accessToken: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => releasePendingCreatorEarnings(accessToken),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' });
+    },
   });
 }
 

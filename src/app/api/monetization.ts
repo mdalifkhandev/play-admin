@@ -73,3 +73,13 @@ export async function updateCreatorRequirementSettings(
     ),
   );
 }
+
+export async function releasePendingCreatorEarnings(accessToken: string) {
+  return getApiData<{ released: number }>(
+    await apiClient.post(
+      '/admin/monetization/earnings/release',
+      {},
+      { headers: authHeaders(accessToken) },
+    ),
+  );
+}

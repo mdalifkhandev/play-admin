@@ -3,22 +3,26 @@ import { Loader2 } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 import {
+  useReleasePendingCreatorEarningsMutation,
   useUpdateCreatorRequirementSettingsMutation,
   useMonetizationDashboardQuery,
-  useUpdateMonetizationSettingsMutation,
 } from "../api/monetization.query";
 import type { CreatorRequirementSettings } from "../api/monetization";
 import { handleApiError } from "../api/client";
 import { PageHeader, Panel, StatCard, StatusPill } from "../components/shared";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Slider } from "../components/ui/slider";
 import { Switch } from "../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { formatMoney } from "../data";
 
 const COLORS = ["#84CC16", "#22c55e", "#3f3f46"];
-const tooltipStyle = { backgroundColor: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff" };
+const tooltipStyle = {
+  backgroundColor: "#1A1A1A",
+  border: "1px solid rgba(255,255,255,0.14)",
+  borderRadius: 8,
+  color: "#FFFFFF",
+};
 const DEFAULT_REQUIREMENTS: CreatorRequirementSettings = {
   profileEnabled: true,
   followersEnabled: true,
@@ -39,33 +43,29 @@ const DEFAULT_REQUIREMENTS: CreatorRequirementSettings = {
 
 export function Monetization({ accessToken }: { accessToken: string }) {
   const query = useMonetizationDashboardQuery(accessToken);
-  const updateMutation = useUpdateMonetizationSettingsMutation(accessToken);
   const updateRequirementsMutation = useUpdateCreatorRequirementSettingsMutation(accessToken);
+  const releaseEarningsMutation = useReleasePendingCreatorEarningsMutation(accessToken);
   const dashboard = query.data;
-  const [creatorShare, setCreatorShare] = useState(60);
   const [requirements, setRequirements] = useState<CreatorRequirementSettings>(DEFAULT_REQUIREMENTS);
 
   useEffect(() => {
-    if (dashboard?.settings.creatorSharePercent !== undefined) {
-      setCreatorShare(dashboard.settings.creatorSharePercent);
-    }
     if (dashboard?.creatorRequirements) {
       setRequirements({ ...DEFAULT_REQUIREMENTS, ...dashboard.creatorRequirements });
     }
-  }, [dashboard?.settings.creatorSharePercent, dashboard?.creatorRequirements]);
-
-  const saveSettings = () => {
-    updateMutation
-      .mutateAsync(creatorShare)
-      .then(() => toast.success("Revenue share settings saved."))
-      .catch((error) => toast.error(handleApiError(error, "Failed to save monetization settings.")));
-  };
+  }, [dashboard?.creatorRequirements]);
 
   const saveRequirements = () => {
     updateRequirementsMutation
       .mutateAsync(requirements)
       .then(() => toast.success("Creator requirement settings saved."))
       .catch((error) => toast.error(handleApiError(error, "Failed to save creator requirements.")));
+  };
+
+  const releasePendingEarnings = () => {
+    releaseEarningsMutation
+      .mutateAsync()
+      .then((result) => toast.success(`Released ${result.released} pending earning${result.released === 1 ? "" : "s"}.`))
+      .catch((error) => toast.error(handleApiError(error, "Failed to release pending earnings.")));
   };
 
   if (query.isLoading) {
@@ -113,7 +113,11 @@ export function Monetization({ accessToken }: { accessToken: string }) {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none" />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                itemStyle={{ color: "#FFFFFF" }}
+                labelStyle={{ color: "#FFFFFF" }}
+              />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-2 mt-2">
@@ -160,26 +164,21 @@ export function Monetization({ accessToken }: { accessToken: string }) {
         </Panel>
       </div>
 
-      <Panel title="Revenue Share Settings">
-        <div className="max-w-xl">
-          <div className="flex items-center justify-between mb-3 text-sm">
-            <span className="text-[#84CC16]">Creator: {creatorShare}%</span>
-            <span className="text-[#A0A0A0]">Admin: {100 - creatorShare}%</span>
-          </div>
-          <Slider value={[creatorShare]} onValueChange={(v) => setCreatorShare(v[0])} min={0} max={100} step={5} />
-          <div className="mt-6">
-            <Button
-              className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
-              disabled={updateMutation.isPending}
-              onClick={saveSettings}
-            >
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </div>
-      </Panel>
-
-      <Panel title="Creator Eligibility Requirements" className="mt-6">
+      <Panel
+        title="Creator Eligibility Requirements"
+        action={
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-white/10 bg-transparent text-[#A0A0A0] hover:bg-white/5"
+            disabled={releaseEarningsMutation.isPending}
+            onClick={releasePendingEarnings}
+          >
+            {releaseEarningsMutation.isPending ? <><Loader2 className="size-4 animate-spin" /> Releasing...</> : "Release Pending"}
+          </Button>
+        }
+        className="mt-6"
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <RequirementToggleField
             label="Profile complete"
