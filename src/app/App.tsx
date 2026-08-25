@@ -37,6 +37,10 @@ export default function App() {
   const title = page === "adminProfile" ? "Admin Profile" : page === "adminNotifications" ? "Admin Notifications" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
+    document.title = `${title} | Play Admin`;
+  }, [title]);
+
+  useEffect(() => {
     const restore = async () => {
       const stored = localStorage.getItem(STORAGE_KEY);
 
