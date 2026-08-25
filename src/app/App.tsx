@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { getAdminMe, loginAdmin, logoutAdmin, refreshAdminSession, type AdminSession } from "./api/auth";
 import { Toaster } from "./components/ui/sonner";
 import { NAV_ITEMS, PageId, Sidebar } from "./components/Sidebar";
@@ -22,17 +21,11 @@ import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
 import { AdminNotifications } from "./pages/AdminNotifications";
 
-const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "withdrawals" | "subscriptions" | "rewards" | "live" | "kids" | "coins" | "notifications" | "settings" | "adminProfile" | "adminNotifications">, () => JSX.Element> = {
-  dashboard: Dashboard,
-};
-
 const STORAGE_KEY = "play-admin-session";
 
 export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
-  const [session, setSession] = useState<AdminSession | null>(null);
-  const [isRestoring, setIsRestoring] = useState(true);
-  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "withdrawals" && page !== "subscriptions" && page !== "rewards" && page !== "live" && page !== "kids" && page !== "coins" && page !== "notifications" && page !== "settings" && page !== "adminProfile" && page !== "adminNotifications" ? PAGES[page] : null;
+  const [session, setSession] = useState<AdminSession | null>(() => getStoredSession());
   const title = page === "adminProfile" ? "Admin Profile" : page === "adminNotifications" ? "Admin Notifications" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
@@ -44,7 +37,6 @@ export default function App() {
       const stored = localStorage.getItem(STORAGE_KEY);
 
       if (!stored) {
-        setIsRestoring(false);
         return;
       }
 
@@ -60,9 +52,8 @@ export default function App() {
           setSession(refreshed);
         } catch {
           localStorage.removeItem(STORAGE_KEY);
+          setSession(null);
         }
-      } finally {
-        setIsRestoring(false);
       }
     };
 
@@ -121,14 +112,6 @@ export default function App() {
     setSession(nextSession);
   };
 
-  if (isRestoring) {
-    return (
-      <div className="dark min-h-screen bg-[#090909] text-white flex items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-[#84CC16]" />
-      </div>
-    );
-  }
-
   if (!session) {
     return (
       <>
@@ -182,8 +165,10 @@ export default function App() {
             <Notifications accessToken={session.accessToken} />
           ) : page === "settings" ? (
             <Settings accessToken={session.accessToken} />
+          ) : page === "dashboard" ? (
+            <Dashboard accessToken={session.accessToken} />
           ) : (
-            Page && <Page />
+            null
           )}
         </main>
       </div>
@@ -194,4 +179,16 @@ export default function App() {
 
 function saveSession(session: AdminSession) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+}
+
+function getStoredSession() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) return null;
+
+  try {
+    return JSON.parse(stored) as AdminSession;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
 }
