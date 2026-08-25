@@ -22,9 +22,8 @@ import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
 import { AdminNotifications } from "./pages/AdminNotifications";
 
-const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "withdrawals" | "subscriptions" | "rewards" | "live" | "kids" | "coins" | "notifications" | "adminProfile" | "adminNotifications">, () => JSX.Element> = {
+const PAGES: Record<Exclude<PageId, "users" | "creators" | "moderation" | "ads" | "monetization" | "withdrawals" | "subscriptions" | "rewards" | "live" | "kids" | "coins" | "notifications" | "settings" | "adminProfile" | "adminNotifications">, () => JSX.Element> = {
   dashboard: Dashboard,
-  settings: Settings,
 };
 
 const STORAGE_KEY = "play-admin-session";
@@ -33,7 +32,7 @@ export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [session, setSession] = useState<AdminSession | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
-  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "withdrawals" && page !== "subscriptions" && page !== "rewards" && page !== "live" && page !== "kids" && page !== "coins" && page !== "notifications" && page !== "adminProfile" && page !== "adminNotifications" ? PAGES[page] : null;
+  const Page = page !== "users" && page !== "creators" && page !== "moderation" && page !== "ads" && page !== "monetization" && page !== "withdrawals" && page !== "subscriptions" && page !== "rewards" && page !== "live" && page !== "kids" && page !== "coins" && page !== "notifications" && page !== "settings" && page !== "adminProfile" && page !== "adminNotifications" ? PAGES[page] : null;
   const title = page === "adminProfile" ? "Admin Profile" : page === "adminNotifications" ? "Admin Notifications" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
 
   useEffect(() => {
@@ -181,6 +180,8 @@ export default function App() {
             <CoinGift accessToken={session.accessToken} />
           ) : page === "notifications" ? (
             <Notifications accessToken={session.accessToken} />
+          ) : page === "settings" ? (
+            <Settings accessToken={session.accessToken} />
           ) : (
             Page && <Page />
           )}
