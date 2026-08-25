@@ -6,13 +6,12 @@ import {
   useAdminPlatformSettingsQuery,
   useUpdateAdminPlatformSettingsMutation,
 } from "../api/settings.query";
-import type { PlatformFeatureFlags, PlatformLanguage, PlatformPayoutRate, PlatformSettings } from "../api/settings";
+import type { PlatformFeatureFlags, PlatformLanguage, PlatformSettings } from "../api/settings";
 import { PageHeader, Panel } from "../components/shared";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 const DEFAULT_SETTINGS: PlatformSettings = {
   maintenanceMode: false,
@@ -86,15 +85,6 @@ export function Settings({ accessToken }: { accessToken: string }) {
       {isSaving(section) ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : "Save"}
     </Button>
   );
-
-  const updatePayoutRate = (index: number, patch: Partial<PlatformPayoutRate>) => {
-    setSettings((current) => ({
-      ...current,
-      payoutRates: current.payoutRates.map((rate, rateIndex) =>
-        rateIndex === index ? { ...rate, ...patch } : rate,
-      ),
-    }));
-  };
 
   const updateLanguage = (index: number, patch: Partial<PlatformLanguage>) => {
     setSettings((current) => ({
@@ -173,40 +163,15 @@ export function Settings({ accessToken }: { accessToken: string }) {
 
       <Panel
         title="Payout Rate"
-        action={<SaveButton section="payout" input={{ payoutPerThousandViewsUsd: settings.payoutPerThousandViewsUsd, payoutRates: settings.payoutRates }} />}
+        action={<SaveButton section="payout" input={{ payoutPerThousandViewsUsd: settings.payoutPerThousandViewsUsd }} />}
       >
-        <div className="max-w-xs mb-6 space-y-2">
+        <div className="max-w-xs space-y-2">
           <Label className="text-[#A0A0A0]">Per 1,000 views</Label>
           <div className="flex items-center gap-2">
             <Input type="number" min={0} step="0.01" value={settings.payoutPerThousandViewsUsd} onChange={(event) => setSettings((current) => ({ ...current, payoutPerThousandViewsUsd: Math.max(0, Number(event.target.value) || 0) }))} className="bg-[#141414] border-white/10 text-white" />
             <span className="text-sm text-[#A0A0A0] whitespace-nowrap">USD</span>
           </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow className="border-white/5 hover:bg-transparent">
-              <TableHead className="text-[#A0A0A0]">Region</TableHead>
-              <TableHead className="text-[#A0A0A0]">Rate / 1K views</TableHead>
-              <TableHead className="text-[#A0A0A0] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {settings.payoutRates.map((rate, index) => (
-              <TableRow key={`${rate.region}-${index}`} className={`border-white/5 hover:bg-white/5 ${index % 2 ? "bg-white/[0.02]" : ""}`}>
-                <TableCell><Input value={rate.region} onChange={(event) => updatePayoutRate(index, { region: event.target.value })} className="bg-[#141414] border-white/10 text-white" /></TableCell>
-                <TableCell><Input type="number" min={0} step="0.01" value={rate.rateUsd} onChange={(event) => updatePayoutRate(index, { rateUsd: Math.max(0, Number(event.target.value) || 0) })} className="bg-[#141414] border-white/10 text-[#84CC16]" /></TableCell>
-                <TableCell className="text-right">
-                  <Button size="icon" variant="ghost" className="size-8 text-red-400 hover:bg-red-500/10" disabled={settings.payoutRates.length <= 1} onClick={() => setSettings((current) => ({ ...current, payoutRates: current.payoutRates.filter((_, rateIndex) => rateIndex !== index) }))}>
-                    <Trash2 className="size-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Button size="sm" variant="outline" className="mt-4 border-white/15 text-white hover:bg-white/5 bg-transparent" onClick={() => setSettings((current) => ({ ...current, payoutRates: [...current.payoutRates, { region: "", rateUsd: 0 }] }))}>
-          <Plus className="size-4" /> Add Region
-        </Button>
       </Panel>
 
       <Panel title="Language Management" action={<Button size="sm" className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90" onClick={() => setSettings((current) => ({ ...current, languages: [...current.languages, { code: "", name: "", active: true }] }))}><Plus className="size-4" /> Add Language</Button>}>
