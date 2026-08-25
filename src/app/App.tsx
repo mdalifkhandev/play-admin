@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { UserManagement } from "./pages/UserManagement";
 import { CreatorManagement } from "./pages/CreatorManagement";
 import { ContentModeration } from "./pages/ContentModeration";
+import { ContentManagement } from "./pages/ContentManagement";
 import { AdManagement } from "./pages/AdManagement";
 import { Monetization } from "./pages/Monetization";
 import { Withdrawals } from "./pages/Withdrawals";
@@ -145,6 +146,8 @@ export default function App() {
             <CreatorManagement accessToken={session.accessToken} />
           ) : page === "moderation" ? (
             <ContentModeration accessToken={session.accessToken} />
+          ) : page === "content" ? (
+            <ContentManagement accessToken={session.accessToken} />
           ) : page === "ads" ? (
             <AdManagement accessToken={session.accessToken} />
           ) : page === "monetization" ? (
