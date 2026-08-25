@@ -1,6 +1,6 @@
 import { apiClient, authHeaders, getApiData } from './client';
 
-export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'transferred' | 'failed' | 'all';
+export type WithdrawalStatus = 'pending' | 'approved' | 'processing' | 'completed' | 'rejected' | 'all';
 
 export type AdminWithdrawalUser = {
   _id?: string;
@@ -19,7 +19,7 @@ export type AdminWithdrawalUser = {
 export type AdminWithdrawal = {
   id: string;
   user: AdminWithdrawalUser | string;
-  withdrawalType?: 'coins' | 'earnings' | string;
+  withdrawalType?: 'earnings' | string;
   coins: number;
   coinsPerDollar: number;
   amountUsd: number;

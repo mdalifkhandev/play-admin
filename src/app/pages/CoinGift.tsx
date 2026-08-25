@@ -74,13 +74,11 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
     icon: "gift",
     coinPrice: "10",
   });
-  const [creatorShare, setCreatorShare] = useState("70");
   const [conversion, setConversion] = useState("100");
 
   const packages = packagesQuery.data ?? [];
   const gifts = giftsQuery.data ?? [];
   const transactions = transactionsQuery.data?.items ?? [];
-  const platformShare = Math.max(0, 100 - (parseInt(creatorShare) || 0));
 
   useEffect(() => {
     setPackageDrafts(Object.fromEntries(packages.map((p) => [p.id, p])));
@@ -579,31 +577,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
         <TabsContent value="revenue" className="mt-4">
           <Panel title="Revenue Settings">
             <div className="max-w-xl space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[#A0A0A0]">Creator Share %</Label>
-                  <div className="flex items-center bg-[#141414] border border-white/10 rounded-md h-9 px-3">
-                    <input
-                      value={creatorShare}
-                      onChange={(e) => setCreatorShare(e.target.value)}
-                      inputMode="numeric"
-                      className="bg-transparent outline-none text-white w-full"
-                    />
-                    <span className="text-[#A0A0A0] ml-1">%</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[#A0A0A0]">Platform Share %</Label>
-                  <div className="flex items-center bg-[#141414] border border-white/10 rounded-md h-9 px-3">
-                    <input
-                      value={platformShare}
-                      readOnly
-                      className="bg-transparent outline-none text-[#84CC16] w-full"
-                    />
-                    <span className="text-[#A0A0A0] ml-1">%</span>
-                  </div>
-                </div>
-              </div>
               <div className="space-y-2">
                 <Label className="text-[#A0A0A0]">Diamond-to-Cash Conversion Rate</Label>
                 <div className="flex items-center bg-[#141414] border border-white/10 rounded-md h-9 px-3">

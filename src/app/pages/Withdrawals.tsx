@@ -42,10 +42,11 @@ function displayMethod(withdrawal: AdminWithdrawal) {
 
 function displayStatus(status: AdminWithdrawal["status"]) {
   if (status === "pending") return "Pending";
-  if (status === "approved") return "Processing";
-  if (status === "transferred") return "Paid";
+  if (status === "approved") return "Approved";
+  if (status === "processing") return "Processing";
+  if (status === "completed") return "Completed";
   if (status === "rejected") return "Rejected";
-  return "Failed";
+  return status;
 }
 
 function formatDate(value?: string) {
@@ -179,10 +180,10 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
                 <SelectContent className="bg-[#1A1A1A] border-white/10 text-white">
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Processing</SelectItem>
-                  <SelectItem value="transferred">Paid</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -286,9 +287,7 @@ function WithdrawalTable({
                 </div>
               </TableCell>
               <TableCell className="text-white">{formatMoney(withdrawal.amountUsd)}</TableCell>
-              <TableCell className="text-[#A0A0A0]">
-                {withdrawal.withdrawalType === "earnings" ? "Earnings" : withdrawal.coins.toLocaleString()}
-              </TableCell>
+              <TableCell className="text-[#A0A0A0]">Earnings</TableCell>
               <TableCell className="text-[#A0A0A0]">{formatDate(withdrawal.createdAt)}</TableCell>
               <TableCell className="text-[#A0A0A0]">{displayMethod(withdrawal)}</TableCell>
               <TableCell><StatusPill status={displayStatus(withdrawal.status)} /></TableCell>
