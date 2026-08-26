@@ -437,7 +437,7 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <StatusPill status={p.isActive ? "Active" : "Cancelled"} />
+                        <StatusPill status={p.isActive ? "Active" : "Canceled"} />
                       </TableCell>
                       <TableCell>
                         <Switch
@@ -539,7 +539,7 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
                         <Label className="text-[#A0A0A0] text-xs">Coin Cost</Label>
                         <p className="text-white font-semibold">{g.coinPrice.toLocaleString()} coins</p>
                       </div>
-                      <StatusPill status={g.isActive ? "Active" : "Cancelled"} />
+                      <StatusPill status={g.isActive ? "Active" : "Canceled"} />
                     </div>
                   );
                 })}

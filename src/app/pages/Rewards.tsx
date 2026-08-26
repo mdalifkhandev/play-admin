@@ -233,7 +233,7 @@ export function Rewards({ accessToken }: RewardsProps) {
                   className="bg-[#141414] border-white/10 text-white"
                 />
               ) : (
-                <StatusPill status={program.isActive ? "Active" : "Cancelled"} />
+                <StatusPill status={program.isActive ? "Active" : "Canceled"} />
               )}
             </div>
           ))}

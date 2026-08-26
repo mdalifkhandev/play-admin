@@ -381,7 +381,7 @@ function statusLabel(status: AdCampaign["status"]) {
     held: "Pending",
     rejected: "Rejected",
     completed: "Completed",
-    cancelled: "Cancelled",
+    cancelled: "Canceled",
   };
   return labels[status];
 }

@@ -236,7 +236,7 @@ function ContentTable({
 
 function formatStatus(status: string) {
   if (status === "active" || status === "ready" || status === "LIVE") return "Active";
-  if (status === "deleted" || status === "DELETED" || status === "CANCELLED") return "Cancelled";
+  if (status === "deleted" || status === "DELETED" || status === "CANCELLED") return "Canceled";
   if (status === "SUSPENDED" || status === "suspended") return "Suspended";
   if (status === "ENDED") return "Ended";
   if (status === "failed") return "Rejected";

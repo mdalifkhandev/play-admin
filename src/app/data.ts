@@ -178,7 +178,7 @@ export const subscriptionRevenue = revenueTrend.map((r) => ({ month: r.month, re
 export const subscribers = [
   { id: "s1", username: "@mia.creates", plan: "Yearly", start: "2025-09-01", status: "Active" },
   { id: "s2", username: "@thegabriel", plan: "Monthly", start: "2026-06-12", status: "Active" },
-  { id: "s3", username: "@coco.travels", plan: "Monthly", start: "2026-05-20", status: "Cancelled" },
+  { id: "s3", username: "@coco.travels", plan: "Monthly", start: "2026-05-20", status: "Canceled" },
   { id: "s4", username: "@hoops.daily", plan: "Yearly", start: "2025-11-11", status: "Active" },
   { id: "s5", username: "@vinyl.days", plan: "Monthly", start: "2026-01-03", status: "Expired" },
 ];
