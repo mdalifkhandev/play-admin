@@ -118,7 +118,12 @@ function SendNotificationTab({ accessToken }: { accessToken: string }) {
         schedule,
         scheduledFor: schedule && scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
       });
-      toast.success(`Notification sent to ${result.targetedUserCount} users.`);
+      const stats = [
+        `${result.targetedUserCount} users`,
+        result.targetedDeviceCount > 0 ? `${result.successCount}/${result.targetedDeviceCount} delivered` : null,
+        result.failureCount > 0 ? `${result.failureCount} failed` : null,
+      ].filter(Boolean).join(" · ");
+      toast.success(`Notification sent — ${stats}`);
       setTitle("");
       setBody("");
       setUserId("");
@@ -384,6 +389,7 @@ function AnnouncementsTab({ accessToken }: { accessToken: string }) {
                   <SelectItem value="home_banner">Home Feed Banner</SelectItem>
                   <SelectItem value="profile_notice">Profile/Menu Notice</SelectItem>
                   <SelectItem value="live_notice">Live Screen Notice</SelectItem>
+                  <SelectItem value="login_notice">Login / Register Notice</SelectItem>
                   <SelectItem value="maintenance">Maintenance Notice</SelectItem>
                 </SelectContent>
               </Select>
@@ -510,6 +516,7 @@ function AnnouncementsTab({ accessToken }: { accessToken: string }) {
                     <SelectItem value="home_banner">Home Feed Banner</SelectItem>
                     <SelectItem value="profile_notice">Profile/Menu Notice</SelectItem>
                     <SelectItem value="live_notice">Live Screen Notice</SelectItem>
+                    <SelectItem value="login_notice">Login / Register Notice</SelectItem>
                     <SelectItem value="maintenance">Maintenance Notice</SelectItem>
                   </SelectContent>
                 </Select>

@@ -111,7 +111,7 @@ const statusStyles: Record<string, string> = {
   Paused: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   Pending: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   Processing: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  Cancelled: "bg-white/10 text-[#A0A0A0] border-white/15",
+  Canceled: "bg-white/10 text-[#A0A0A0] border-white/15",
   Ended: "bg-white/10 text-[#A0A0A0] border-white/15",
   Sent: "bg-[#84CC16]/15 text-[#84CC16] border-[#84CC16]/30",
   "Force ended": "bg-red-500/15 text-red-400 border-red-500/30",

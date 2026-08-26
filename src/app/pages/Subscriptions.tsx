@@ -559,11 +559,20 @@ function formatDate(value?: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
+function formatStatus(status?: string) {
+  if (!status) return "-";
+  if (status === "active") return "Active";
+  if (status === "expired") return "Expired";
+  if (status === "canceled") return "Canceled";
+  if (status === "hold") return "On Hold";
+  return status;
+}
+
 function getSubscriptionStatusLabel(status: string) {
   if (status === "active") return "Active";
   if (status === "hold") return "Held";
   if (status === "expired") return "Expired";
-  if (status === "canceled") return "Cancelled";
+  if (status === "canceled") return "Canceled";
   return "None";
 }
 
