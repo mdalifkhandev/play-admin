@@ -5,6 +5,9 @@ export type AdminDashboardSummary = {
   totalCreators: number;
   revenueToday: number;
   revenueThisMonth: number;
+  pendingPayouts: number;
+  activeUsers24h: number;
+  pendingReports: number;
   totalUsersChangePercent: number;
   totalCreatorsChangePercent: number;
   revenueTodayChangePercent: number;

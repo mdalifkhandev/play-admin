@@ -7,6 +7,7 @@ import {
   updateAdminNotification,
   type AdminNotificationAudience,
 } from './notifications';
+import { dashboardQueryKeys } from './dashboard.query';
 
 export const adminNotificationQueryKeys = {
   all: ['admin-notification-management'] as const,
@@ -51,7 +52,10 @@ export function useSendAdminNotificationMutation(accessToken: string) {
       scheduledFor?: string;
     }) => sendAdminNotification(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -73,7 +77,10 @@ export function useUpdateAdminNotificationMutation(accessToken: string) {
       };
     }) => updateAdminNotification(accessToken, notificationId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

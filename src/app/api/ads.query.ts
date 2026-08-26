@@ -5,6 +5,8 @@ import {
   reviewAdminAd,
   type AdCampaignStatus,
 } from './ads';
+import { dashboardQueryKeys } from './dashboard.query';
+import { monetizationQueryKeys } from './monetization.query';
 
 export const adQueryKeys = {
   all: ['admin-ads'] as const,
@@ -38,7 +40,11 @@ export function useReviewAdminAdMutation(accessToken: string) {
       reason?: string;
     }) => reviewAdminAd(accessToken, adId, action, reason),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

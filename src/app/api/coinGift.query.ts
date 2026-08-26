@@ -16,6 +16,8 @@ import {
   type AdminCoinSettings,
   type AdminGift,
 } from './coinGift';
+import { dashboardQueryKeys } from './dashboard.query';
+import { monetizationQueryKeys } from './monetization.query';
 
 export const coinGiftQueryKeys = {
   all: ['admin-coin-gift'] as const,
@@ -67,7 +69,11 @@ export function useCreateAdminCoinPackageMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: Partial<AdminCoinPackage>) => createAdminCoinPackage(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -78,7 +84,11 @@ export function useUpdateAdminCoinPackageMutation(accessToken: string) {
     mutationFn: ({ packageId, input }: { packageId: string; input: Partial<AdminCoinPackage> }) =>
       updateAdminCoinPackage(accessToken, packageId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -88,7 +98,11 @@ export function useDeleteAdminCoinPackageMutation(accessToken: string) {
   return useMutation({
     mutationFn: (packageId: string) => deleteAdminCoinPackage(accessToken, packageId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -98,7 +112,11 @@ export function useCreateAdminGiftMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: Partial<AdminGift>) => createAdminGift(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -109,7 +127,11 @@ export function useUpdateAdminGiftMutation(accessToken: string) {
     mutationFn: ({ giftId, input }: { giftId: string; input: Partial<AdminGift> }) =>
       updateAdminGift(accessToken, giftId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -119,7 +141,11 @@ export function useDeleteAdminGiftMutation(accessToken: string) {
   return useMutation({
     mutationFn: (giftId: string) => deleteAdminGift(accessToken, giftId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -129,7 +155,11 @@ export function useUpdateAdminCoinSettingsMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: AdminCoinSettings) => updateAdminCoinSettings(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: coinGiftQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

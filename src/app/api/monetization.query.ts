@@ -7,6 +7,7 @@ import {
   updateMonetizationSettings,
   type CreatorRequirementSettings,
 } from './monetization';
+import { dashboardQueryKeys } from './dashboard.query';
 
 export const monetizationQueryKeys = {
   all: ['admin-monetization'] as const,
@@ -28,7 +29,10 @@ export function useReleasePendingCreatorEarningsMutation(accessToken: string) {
   return useMutation({
     mutationFn: () => releasePendingCreatorEarnings(accessToken),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -39,7 +43,10 @@ export function useUpdateMonetizationSettingsMutation(accessToken: string) {
   return useMutation({
     mutationFn: (creatorSharePercent: number) => updateMonetizationSettings(accessToken, creatorSharePercent),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -50,7 +57,10 @@ export function useUpdateCreatorRequirementSettingsMutation(accessToken: string)
   return useMutation({
     mutationFn: (settings: CreatorRequirementSettings) => updateCreatorRequirementSettings(accessToken, settings),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

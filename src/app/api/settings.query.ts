@@ -5,6 +5,7 @@ import {
   updateAdminPlatformSettings,
   type UpdatePlatformSettingsInput,
 } from './settings';
+import { dashboardQueryKeys } from './dashboard.query';
 
 export const settingsQueryKeys = {
   all: ['admin-settings'] as const,
@@ -26,7 +27,10 @@ export function useUpdateAdminPlatformSettingsMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: UpdatePlatformSettingsInput) => updateAdminPlatformSettings(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: settingsQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: settingsQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

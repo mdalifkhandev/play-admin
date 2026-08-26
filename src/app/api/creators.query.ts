@@ -7,6 +7,8 @@ import {
   rejectCreatorApplication,
   type CreatorApplicationStatus,
 } from './creators';
+import { dashboardQueryKeys } from './dashboard.query';
+import { monetizationQueryKeys } from './monetization.query';
 
 export const creatorQueryKeys = {
   all: ['creator-applications'] as const,
@@ -45,8 +47,12 @@ function useReviewMutation<TInput>(
 
   return useMutation({
     mutationFn: action,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: creatorQueryKeys.all });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: creatorQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

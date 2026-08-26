@@ -54,35 +54,39 @@ export function Dashboard({ accessToken }: { accessToken: string }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="Total Users"
-          value={summaryQuery.isLoading ? "..." : formatNumber(summary?.totalUsers ?? 0)}
+          value={formatNumber(summary?.totalUsers ?? 0)}
           change={formatChange(summary?.totalUsersChangePercent)}
           positive={(summary?.totalUsersChangePercent ?? 0) >= 0}
+          isLoading={summaryQuery.isLoading}
         />
         <StatCard
           label="Total Creators"
-          value={summaryQuery.isLoading ? "..." : formatNumber(summary?.totalCreators ?? 0)}
+          value={formatNumber(summary?.totalCreators ?? 0)}
           change={formatChange(summary?.totalCreatorsChangePercent)}
           positive={(summary?.totalCreatorsChangePercent ?? 0) >= 0}
+          isLoading={summaryQuery.isLoading}
         />
         <StatCard
           label="Revenue Today"
-          value={summaryQuery.isLoading ? "..." : formatMoney(summary?.revenueToday ?? 0)}
+          value={formatMoney(summary?.revenueToday ?? 0)}
           change={formatChange(summary?.revenueTodayChangePercent)}
           positive={(summary?.revenueTodayChangePercent ?? 0) >= 0}
+          isLoading={summaryQuery.isLoading}
         />
         <StatCard
           label="Revenue This Month"
-          value={summaryQuery.isLoading ? "..." : formatMoney(summary?.revenueThisMonth ?? 0)}
+          value={formatMoney(summary?.revenueThisMonth ?? 0)}
           change={formatChange(summary?.revenueThisMonthChangePercent)}
           positive={(summary?.revenueThisMonthChangePercent ?? 0) >= 0}
+          isLoading={summaryQuery.isLoading}
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Reward Programs" value={rewardsQuery.isLoading ? "..." : activePrograms.toLocaleString()} change="Active" positive />
-        <StatCard label="Pending Winners" value={rewardsQuery.isLoading ? "..." : pendingWinners.toLocaleString()} change="Review" positive={pendingWinners === 0} />
-        <StatCard label="Paid Winners" value={rewardsQuery.isLoading ? "..." : paidWinners.toLocaleString()} change="Paid" positive />
-        <StatCard label="Top Reward Score" value={rewardsQuery.isLoading ? "..." : (topCreator?.score ?? 0).toLocaleString()} change={topCreator ? `#1 ${topCreator.name}` : "No data"} positive />
+        <StatCard label="Reward Programs" value={activePrograms.toLocaleString()} change="Active" positive isLoading={rewardsQuery.isLoading} />
+        <StatCard label="Pending Winners" value={pendingWinners.toLocaleString()} change="Review" positive={pendingWinners === 0} isLoading={rewardsQuery.isLoading} />
+        <StatCard label="Pending Payouts" value={formatMoney(summary?.pendingPayouts ?? 0)} change="Review" positive={(summary?.pendingPayouts ?? 0) === 0} isLoading={summaryQuery.isLoading} />
+        <StatCard label="Active Users (24h)" value={formatNumber(summary?.activeUsers24h ?? 0)} change={`${summary?.pendingReports ?? 0} reports`} positive={(summary?.pendingReports ?? 0) === 0} isLoading={summaryQuery.isLoading} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

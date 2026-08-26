@@ -11,6 +11,8 @@ import {
   type AdminSubscriptionSubscriberStatus,
   type AdminSubscriptionPlanInput,
 } from './subscriptions';
+import { dashboardQueryKeys } from './dashboard.query';
+import { monetizationQueryKeys } from './monetization.query';
 
 export const subscriptionQueryKeys = {
   all: ['admin-subscriptions'] as const,
@@ -45,7 +47,11 @@ export function useCreateAdminSubscriptionPlanMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: AdminSubscriptionPlanInput) => createAdminSubscriptionPlan(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -57,7 +63,11 @@ export function useUpdateAdminSubscriptionPlanMutation(accessToken: string) {
     mutationFn: ({ planId, input }: { planId: string; input: AdminSubscriptionPlanInput }) =>
       updateAdminSubscriptionPlan(accessToken, planId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -68,7 +78,11 @@ export function useDeleteAdminSubscriptionPlanMutation(accessToken: string) {
   return useMutation({
     mutationFn: (planId: string) => deleteAdminSubscriptionPlan(accessToken, planId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -80,7 +94,11 @@ export function useUpdateAdminSubscriptionSubscriberStatusMutation(accessToken: 
     mutationFn: ({ userId, status }: { userId: string; status: AdminSubscriptionSubscriberStatus }) =>
       updateAdminSubscriptionSubscriberStatus(accessToken, userId, status),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: subscriptionQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

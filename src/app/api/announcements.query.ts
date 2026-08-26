@@ -9,6 +9,8 @@ import {
   type CreateAdminAnnouncementInput,
   type UpdateAdminAnnouncementInput,
 } from './announcements';
+import { dashboardQueryKeys } from './dashboard.query';
+import { adminNotificationQueryKeys } from './notifications.query';
 
 export const announcementQueryKeys = {
   all: ['admin-announcements'] as const,
@@ -33,7 +35,11 @@ export function useCreateAdminAnnouncementMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: CreateAdminAnnouncementInput) => createAdminAnnouncement(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: announcementQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: announcementQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -49,7 +55,11 @@ export function useUpdateAdminAnnouncementMutation(accessToken: string) {
       input: UpdateAdminAnnouncementInput;
     }) => updateAdminAnnouncement(accessToken, announcementId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: announcementQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: announcementQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -59,7 +69,11 @@ export function useDeleteAdminAnnouncementMutation(accessToken: string) {
   return useMutation({
     mutationFn: (announcementId: string) => deleteAdminAnnouncement(accessToken, announcementId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: announcementQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: announcementQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: adminNotificationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

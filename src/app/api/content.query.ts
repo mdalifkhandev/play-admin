@@ -7,6 +7,8 @@ import {
   type AdminContentType,
   type UpdateAdminContentInput,
 } from "./content";
+import { dashboardQueryKeys } from "./dashboard.query";
+import { moderationQueryKeys } from "./moderation.query";
 
 const contentKeys = {
   all: ["admin-content"] as const,
@@ -30,7 +32,13 @@ export function useUpdateAdminContentMutation(accessToken: string) {
   return useMutation({
     mutationFn: ({ type, id, input }: { type: AdminContentType; id: string; input: UpdateAdminContentInput }) =>
       updateAdminContent(accessToken, type, id, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: contentKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: contentKeys.all, refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all, refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: "all" }),
+      ]);
+    },
   });
 }
 
@@ -38,7 +46,13 @@ export function useRemoveAdminContentMutation(accessToken: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ type, id }: { type: AdminContentType; id: string }) => removeAdminContent(accessToken, type, id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: contentKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: contentKeys.all, refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all, refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: "all" }),
+      ]);
+    },
   });
 }
 
@@ -46,7 +60,12 @@ export function useRestoreAdminContentMutation(accessToken: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ type, id }: { type: AdminContentType; id: string }) => restoreAdminContent(accessToken, type, id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: contentKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: contentKeys.all, refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all, refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: "all" }),
+      ]);
+    },
   });
 }
-

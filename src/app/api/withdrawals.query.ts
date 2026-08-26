@@ -6,6 +6,8 @@ import {
   rejectAdminWithdrawal,
   type AdminWithdrawalListParams,
 } from './withdrawals';
+import { dashboardQueryKeys } from './dashboard.query';
+import { monetizationQueryKeys } from './monetization.query';
 
 export const withdrawalsQueryKeys = {
   all: ['admin-withdrawals'] as const,
@@ -28,7 +30,11 @@ export function useApproveAdminWithdrawalMutation(accessToken: string) {
     mutationFn: ({ requestId, adminNotes }: { requestId: string; adminNotes?: string }) =>
       approveAdminWithdrawal(accessToken, requestId, adminNotes),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -40,7 +46,11 @@ export function useRejectAdminWithdrawalMutation(accessToken: string) {
     mutationFn: ({ requestId, reason }: { requestId: string; reason: string }) =>
       rejectAdminWithdrawal(accessToken, requestId, reason),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

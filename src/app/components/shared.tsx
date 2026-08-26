@@ -20,18 +20,26 @@ export function StatCard({
   value,
   change,
   positive = true,
+  isLoading = false,
 }: {
   label: string;
   value: string;
   change?: string;
   positive?: boolean;
+  isLoading?: boolean;
 }) {
   return (
     <div className="rounded-xl bg-[#1A1A1A] border border-white/5 p-5">
       <p className="text-[#A0A0A0] text-sm">{label}</p>
       <div className="mt-2 flex items-end justify-between">
-        <span className="text-3xl font-semibold text-white tracking-tight">{value}</span>
-        {change && (
+        {isLoading ? (
+          <div className="h-9 w-24 animate-pulse rounded-md bg-white/10" />
+        ) : (
+          <span className="text-3xl font-semibold text-white tracking-tight">{value}</span>
+        )}
+        {isLoading ? (
+          <div className="h-5 w-14 animate-pulse rounded-full bg-white/10" />
+        ) : change && (
           <span
             className={cn(
               "inline-flex items-center gap-1 text-sm",
@@ -44,6 +52,25 @@ export function StatCard({
         )}
       </div>
     </div>
+  );
+}
+
+export function SectionLoading({ label, className }: { label: string; className?: string }) {
+  return (
+    <div className={cn("flex items-center justify-center gap-2 py-10 text-[#A0A0A0]", className)}>
+      <div className="size-4 animate-spin rounded-full border-2 border-[#84CC16] border-t-transparent" />
+      {label}
+    </div>
+  );
+}
+
+export function TableLoadingRow({ colSpan, label }: { colSpan: number; label: string }) {
+  return (
+    <tr className="border-white/5 hover:bg-transparent">
+      <td colSpan={colSpan} className="py-8 text-center text-[#A0A0A0]">
+        <SectionLoading label={label} className="py-0" />
+      </td>
+    </tr>
   );
 }
 

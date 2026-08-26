@@ -7,6 +7,7 @@ import {
   type ModerationReportStatus,
   type ModerationTargetType,
 } from './moderation';
+import { dashboardQueryKeys } from './dashboard.query';
 
 export const moderationQueryKeys = {
   all: ['moderation-reports'] as const,
@@ -33,7 +34,10 @@ export function useReviewModerationReportMutation(accessToken: string) {
     mutationFn: ({ reportId, action, reason }: { reportId: string; action: ModerationAction; reason?: string }) =>
       reviewModerationReport(accessToken, reportId, action, reason),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: moderationQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

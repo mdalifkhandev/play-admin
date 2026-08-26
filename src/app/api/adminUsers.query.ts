@@ -10,6 +10,7 @@ import {
   type AdminManagedUser,
   type AdminUserListParams,
 } from './adminUsers';
+import { dashboardQueryKeys } from './dashboard.query';
 
 export const adminUsersQueryKeys = {
   all: ['admin-users'] as const,
@@ -47,7 +48,10 @@ export function useWarnAdminUserMutation(accessToken: string) {
   return useMutation({
     mutationFn: (userId: string) => warnAdminUser(accessToken, userId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -58,7 +62,10 @@ function useUserActionMutation(action: (userId: string) => Promise<AdminManagedU
   return useMutation({
     mutationFn: action,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminUsersQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }

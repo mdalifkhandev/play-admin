@@ -12,6 +12,7 @@ import {
   type AdminRewardSettings,
   type AdminRewardWinner,
 } from './rewards';
+import { dashboardQueryKeys } from './dashboard.query';
 
 export const rewardQueryKeys = {
   all: ['admin-rewards'] as const,
@@ -33,7 +34,10 @@ export function useUpdateAdminRewardSettingsMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: AdminRewardSettings) => updateAdminRewardSettings(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -44,7 +48,10 @@ export function useCreateAdminRewardProgramMutation(accessToken: string) {
   return useMutation({
     mutationFn: (input: AdminRewardProgramInput) => createAdminRewardProgram(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -56,7 +63,10 @@ export function useUpdateAdminRewardProgramMutation(accessToken: string) {
     mutationFn: ({ programId, input }: { programId: string; input: Partial<AdminRewardProgramInput> }) =>
       updateAdminRewardProgram(accessToken, programId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -68,7 +78,10 @@ export function useFinalizeAdminRewardWinnersMutation(accessToken: string) {
     mutationFn: (input: { programId?: string; limit?: number; cycleLabel?: string }) =>
       finalizeAdminRewardWinners(accessToken, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
@@ -80,7 +93,10 @@ export function useUpdateAdminRewardWinnerStatusMutation(accessToken: string) {
     mutationFn: ({ winnerId, status }: { winnerId: string; status: AdminRewardWinner['status'] }) =>
       updateAdminRewardWinnerStatus(accessToken, winnerId, status),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: rewardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+      ]);
     },
   });
 }
