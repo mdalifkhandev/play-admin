@@ -15,6 +15,7 @@ import type { AdCampaign } from "../api/ads";
 import { handleApiError } from "../api/client";
 import { ApproveButton, PageHeader, Panel, RejectButton, StatusPill } from "../components/shared";
 import { Button } from "../components/ui/button";
+import { ConfirmModal } from "../components/ui/confirm-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import {
@@ -31,6 +32,10 @@ const tooltipStyle = { backgroundColor: "#1A1A1A", border: "1px solid rgba(255,2
 
 export function AdManagement({ accessToken }: { accessToken: string }) {
   const [selectedAd, setSelectedAd] = useState<AdCampaign | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    ad: AdCampaign;
+    action: "approve" | "reject" | "hold" | "pause" | "resume" | "cancel";
+  } | null>(null);
   const allQuery = useAdminAdsQuery(accessToken, { limit: 50 });
   const pendingQuery = useAdminAdsQuery(accessToken, { status: "pending", limit: 50 });
   const heldQuery = useAdminAdsQuery(accessToken, { status: "held", limit: 50 });
@@ -53,9 +58,18 @@ export function AdManagement({ accessToken }: { accessToken: string }) {
     ad: AdCampaign,
     action: "approve" | "reject" | "hold" | "pause" | "resume" | "cancel",
   ) => {
+    setPendingAction({ ad, action });
+  };
+
+  const confirmAction = () => {
+    if (!pendingAction) return;
+    const { ad, action } = pendingAction;
     reviewMutation
       .mutateAsync({ adId: ad.id, action })
-      .then(() => toast.success(`Ad campaign ${action}d.`))
+      .then(() => {
+        setPendingAction(null);
+        toast.success(`Ad campaign ${action}d.`);
+      })
       .catch((error) => toast.error(handleApiError(error, "Ad action failed.")));
   };
 
@@ -241,6 +255,15 @@ export function AdManagement({ accessToken }: { accessToken: string }) {
           )}
         </SheetContent>
       </Sheet>
+      <ConfirmModal
+        open={!!pendingAction}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+        title={`${getActionLabel(pendingAction?.action)} Campaign`}
+        description={`${getActionLabel(pendingAction?.action)} "${pendingAction ? campaignTitle(pendingAction.ad) : "this campaign"}"? This change will be recorded in admin audit logs.`}
+        confirmText={isReviewing ? "Working..." : getActionLabel(pendingAction?.action)}
+        variant={pendingAction?.action === "approve" || pendingAction?.action === "resume" ? "default" : "destructive"}
+        onConfirm={confirmAction}
+      />
     </div>
   );
 }
@@ -396,4 +419,14 @@ function buildRevenue(ads: AdCampaign[]) {
   });
 
   return months.map((month) => ({ month, revenue: totals.get(month) ?? 0 }));
+}
+
+function getActionLabel(action?: "approve" | "reject" | "hold" | "pause" | "resume" | "cancel") {
+  if (action === "approve") return "Approve";
+  if (action === "reject") return "Reject";
+  if (action === "hold") return "Hold";
+  if (action === "pause") return "Pause";
+  if (action === "resume") return "Resume";
+  if (action === "cancel") return "Cancel";
+  return "Confirm";
 }

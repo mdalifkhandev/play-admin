@@ -18,6 +18,7 @@ import {
 } from "../api/notifications.query";
 import { PageHeader, Panel, StatusPill } from "../components/shared";
 import { Button } from "../components/ui/button";
+import { ConfirmModal } from "../components/ui/confirm-modal";
 import {
   Dialog,
   DialogContent,
@@ -77,19 +78,35 @@ function SendNotificationTab({ accessToken }: { accessToken: string }) {
   const [deepLink, setDeepLink] = useState("");
   const [schedule, setSchedule] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const sendNotification = useSendAdminNotificationMutation(accessToken);
 
-  const handleSend = async () => {
+  const validateSendForm = () => {
     if (!title.trim() || !body.trim()) {
       toast.error("Title and message are required.");
-      return;
+      return false;
     }
 
     if (audience === "specific_user" && !userId.trim()) {
       toast.error("User id is required.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSend = async () => {
+    if (!validateSendForm()) return;
+
+    if (audience !== "specific_user") {
+      setConfirmSendOpen(true);
       return;
     }
 
+    await submitSend();
+  };
+
+  const submitSend = async () => {
     try {
       const result = await sendNotification.mutateAsync({
         title: title.trim(),
@@ -186,6 +203,17 @@ function SendNotificationTab({ accessToken }: { accessToken: string }) {
         </div>
       </Panel>
       <HistoryTab accessToken={accessToken} />
+      <ConfirmModal
+        open={confirmSendOpen}
+        onOpenChange={setConfirmSendOpen}
+        title="Send Broadcast Notification"
+        description={`Send this notification to ${formatSendAudience(audience)}? This action can reach many users.`}
+        confirmText={sendNotification.isPending ? "Sending..." : "Send"}
+        variant="destructive"
+        onConfirm={() => {
+          void submitSend();
+        }}
+      />
     </div>
   );
 }
@@ -201,6 +229,7 @@ function AnnouncementsTab({ accessToken }: { accessToken: string }) {
   const [endsAt, setEndsAt] = useState("");
   const [actionId, setActionId] = useState<string | null>(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AdminAnnouncement | null>(null);
+  const [announcementToDelete, setAnnouncementToDelete] = useState<AdminAnnouncement | null>(null);
   const [editForm, setEditForm] = useState({
     title: "",
     message: "",
@@ -427,7 +456,7 @@ function AnnouncementsTab({ accessToken }: { accessToken: string }) {
                         <Button variant="outline" size="sm" className="border-white/10 bg-transparent hover:bg-white/5" disabled={isBusy || announcement.status === "expired"} onClick={() => handleStatusChange(announcement.id, announcement.status === "paused" ? "active" : "paused")}>
                           {isBusy ? <Loader2 className="size-4 animate-spin" /> : announcement.status === "paused" ? "Resume" : "Pause"}
                         </Button>
-                        <Button variant="outline" size="sm" className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent" disabled={isBusy} onClick={() => handleDelete(announcement.id)}>
+                        <Button variant="outline" size="sm" className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent" disabled={isBusy} onClick={() => setAnnouncementToDelete(announcement)}>
                           Delete
                         </Button>
                       </div>
@@ -510,6 +539,19 @@ function AnnouncementsTab({ accessToken }: { accessToken: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmModal
+        open={!!announcementToDelete}
+        onOpenChange={(open) => !open && setAnnouncementToDelete(null)}
+        title="Delete Announcement"
+        description={`Delete ${announcementToDelete?.title || "this announcement"}? It will stop showing in the app.`}
+        confirmText={actionId === announcementToDelete?.id ? "Deleting..." : "Delete"}
+        variant="destructive"
+        onConfirm={() => {
+          if (announcementToDelete) {
+            void handleDelete(announcementToDelete.id).then(() => setAnnouncementToDelete(null));
+          }
+        }}
+      />
     </div>
   );
 }
@@ -705,6 +747,15 @@ function formatType(type: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatSendAudience(audience: AdminNotificationAudience) {
+  if (audience === "all") return "all users";
+  if (audience === "active_users") return "active users";
+  if (audience === "creators") return "creators";
+  if (audience === "premium") return "premium users";
+  if (audience === "kids") return "kids mode users";
+  return "the selected user";
 }
 
 function formatDate(value?: string) {

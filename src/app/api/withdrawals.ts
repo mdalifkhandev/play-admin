@@ -1,6 +1,6 @@
 import { apiClient, authHeaders, getApiData } from './client';
 
-export type WithdrawalStatus = 'pending' | 'approved' | 'processing' | 'completed' | 'rejected' | 'all';
+export type WithdrawalStatus = 'pending' | 'approved' | 'processing' | 'completed' | 'rejected' | 'failed' | 'all';
 
 export type AdminWithdrawalUser = {
   _id?: string;
@@ -27,6 +27,7 @@ export type AdminWithdrawal = {
   status: Exclude<WithdrawalStatus, 'all'>;
   stripeConnectAccountId: string;
   stripeTransferId?: string;
+  failureReason?: string;
   adminNotes?: string;
   createdAt: string;
   processedAt?: string;
@@ -83,6 +84,34 @@ export async function rejectAdminWithdrawal(
     await apiClient.post(
       `/coins/admin/withdrawals/${requestId}/reject`,
       { reason },
+      { headers: authHeaders(accessToken) },
+    ),
+  );
+}
+
+export async function retryAdminWithdrawal(
+  accessToken: string,
+  requestId: string,
+  adminNotes?: string,
+) {
+  return getApiData<{ retried: true; withdrawalId: string; status: string; stripeTransferId?: string }>(
+    await apiClient.post(
+      `/coins/admin/withdrawals/${requestId}/retry`,
+      { adminNotes },
+      { headers: authHeaders(accessToken) },
+    ),
+  );
+}
+
+export async function completeAdminWithdrawal(
+  accessToken: string,
+  requestId: string,
+  input: { stripeTransferId?: string; adminNotes?: string },
+) {
+  return getApiData<{ completed: true; withdrawalId: string; status: string; stripeTransferId?: string }>(
+    await apiClient.post(
+      `/coins/admin/withdrawals/${requestId}/complete`,
+      input,
       { headers: authHeaders(accessToken) },
     ),
   );

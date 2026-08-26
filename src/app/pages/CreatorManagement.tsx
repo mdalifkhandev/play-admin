@@ -21,6 +21,7 @@ import { handleApiError } from "../api/client";
 import { ApproveButton, PageHeader, Panel, RejectButton, StatCard, StatusPill } from "../components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -30,6 +31,7 @@ import {
 } from "../components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Textarea } from "../components/ui/textarea";
 import { creatorEarningsGraph, formatMoney, formatNumber } from "../data";
 
 const tooltipStyle = { backgroundColor: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff" };
@@ -79,6 +81,11 @@ function Performance({ creator, onBack }: { creator: CreatorApplication; onBack:
 export function CreatorManagement({ accessToken }: { accessToken: string }) {
   const [perf, setPerf] = useState<CreatorApplication | null>(null);
   const [selected, setSelected] = useState<CreatorApplication | null>(null);
+  const [reviewState, setReviewState] = useState<{
+    action: "approve" | "reject" | "hold";
+    application: CreatorApplication;
+    reason: string;
+  } | null>(null);
   const pendingQuery = useCreatorApplicationsQuery(accessToken, "pending");
   const heldQuery = useCreatorApplicationsQuery(accessToken, "held");
   const activeQuery = useCreatorApplicationsQuery(accessToken, "approved");
@@ -96,6 +103,12 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
     action: "approve" | "reject" | "hold",
     application: CreatorApplication,
   ) => {
+    setReviewState({ action, application, reason: application.adminReason || "" });
+  };
+
+  const submitReview = () => {
+    if (!reviewState || isReviewing) return;
+    const { action, application, reason } = reviewState;
     const mutation =
       action === "approve" ? approveMutation : action === "reject" ? rejectMutation : holdMutation;
     const successMessage =
@@ -104,13 +117,8 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
         : action === "reject"
           ? "Creator application rejected."
           : "Creator application held.";
-
-    const reason =
-      action === "approve"
-        ? undefined
-        : window.prompt(action === "reject" ? "Reject reason" : "Hold reason", application.adminReason || "");
-
-    if (action !== "approve" && reason === null) {
+    if (action !== "approve" && !reason.trim()) {
+      toast.error(action === "reject" ? "Reject reason is required." : "Hold reason is required.");
       return;
     }
 
@@ -120,6 +128,7 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
       .mutateAsync(payload as never)
       .then(() => {
         setSelected(null);
+        setReviewState(null);
         toast.success(successMessage);
       })
       .catch((error) => {
@@ -253,6 +262,56 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
           )}
         </SheetContent>
       </Sheet>
+      <Dialog open={!!reviewState} onOpenChange={(open) => !open && setReviewState(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {reviewState?.action === "approve"
+                ? "Approve Creator"
+                : reviewState?.action === "reject"
+                  ? "Reject Creator"
+                  : "Hold Creator"}
+            </DialogTitle>
+            <DialogDescription>
+              {reviewState?.action === "approve"
+                ? "Confirm that this creator application is valid and ready for monetization tools."
+                : "Add a clear reason so the review decision is traceable."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm">
+              <div className="text-white">{reviewState ? displayName(reviewState.application) : "Creator"}</div>
+              <div className="text-[#A0A0A0]">{reviewState?.application.email}</div>
+            </div>
+            {reviewState?.action !== "approve" && (
+              <Textarea
+                value={reviewState?.reason ?? ""}
+                onChange={(event) => setReviewState((current) => (current ? { ...current, reason: event.target.value } : current))}
+                placeholder={reviewState?.action === "reject" ? "Reject reason" : "Hold reason"}
+                className="min-h-24 bg-[#111] border-white/10"
+              />
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="border-white/10 bg-transparent hover:bg-white/5" onClick={() => setReviewState(null)}>
+                Cancel
+              </Button>
+              <Button
+                className={
+                  reviewState?.action === "reject"
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : reviewState?.action === "hold"
+                      ? "bg-amber-500 text-black hover:bg-amber-500/90"
+                      : "bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
+                }
+                disabled={isReviewing}
+                onClick={submitReview}
+              >
+                {isReviewing ? "Working..." : reviewState?.action === "approve" ? "Approve" : reviewState?.action === "reject" ? "Reject" : "Hold"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

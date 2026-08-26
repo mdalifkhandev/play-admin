@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import {
   useAdminCoinPackagesQuery,
-  useAdminCoinSettingsQuery,
   useAdminCoinTransactionsQuery,
   useAdminGiftsQuery,
   useCreateAdminCoinPackageMutation,
@@ -26,7 +25,6 @@ import {
   useDeleteAdminCoinPackageMutation,
   useDeleteAdminGiftMutation,
   useUpdateAdminCoinPackageMutation,
-  useUpdateAdminCoinSettingsMutation,
   useUpdateAdminGiftMutation,
 } from "../api/coinGift.query";
 import { handleApiError } from "../api/client";
@@ -43,7 +41,6 @@ function AddButton({ label, onClick, disabled }: { label: string; onClick: () =>
 export function CoinGift({ accessToken }: { accessToken: string }) {
   const packagesQuery = useAdminCoinPackagesQuery(accessToken);
   const giftsQuery = useAdminGiftsQuery(accessToken);
-  const settingsQuery = useAdminCoinSettingsQuery(accessToken);
   const transactionsQuery = useAdminCoinTransactionsQuery(accessToken, { page: 1, limit: 50 });
 
   const createPackageMutation = useCreateAdminCoinPackageMutation(accessToken);
@@ -52,7 +49,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
   const createGiftMutation = useCreateAdminGiftMutation(accessToken);
   const updateGiftMutation = useUpdateAdminGiftMutation(accessToken);
   const deleteGiftMutation = useDeleteAdminGiftMutation(accessToken);
-  const updateSettingsMutation = useUpdateAdminCoinSettingsMutation(accessToken);
 
   const [packageDrafts, setPackageDrafts] = useState<Record<string, AdminCoinPackage>>({});
   const [packageModalOpen, setPackageModalOpen] = useState(false);
@@ -74,7 +70,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
     icon: "gift",
     coinPrice: "10",
   });
-  const [conversion, setConversion] = useState("100");
 
   const packages = packagesQuery.data ?? [];
   const gifts = giftsQuery.data ?? [];
@@ -83,12 +78,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
   useEffect(() => {
     setPackageDrafts(Object.fromEntries(packages.map((p) => [p.id, p])));
   }, [packages]);
-
-  useEffect(() => {
-    if (settingsQuery.data) {
-      setConversion(String(settingsQuery.data.coinsPerDollar));
-    }
-  }, [settingsQuery.data]);
 
   const savePackage = (id: string, input?: Partial<AdminCoinPackage>) => {
     const draft = packageDrafts[id];
@@ -163,20 +152,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
       coinPrice: String(gift.coinPrice),
     });
     setGiftModalOpen(true);
-  };
-
-  const saveSettings = () => {
-    updateSettingsMutation.mutate(
-      {
-        coinsPerDollar: Number(conversion) || 100,
-        minWithdrawalUsd: settingsQuery.data?.minWithdrawalUsd ?? 10,
-        maxWithdrawalUsd: settingsQuery.data?.maxWithdrawalUsd ?? 5000,
-      },
-      {
-        onSuccess: () => toast.success("Revenue settings saved"),
-        onError: () => toast.error("Revenue settings could not be saved"),
-      },
-    );
   };
 
   const savePackageModal = () => {
@@ -402,12 +377,11 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
 
   return (
     <div>
-      <PageHeader title="Coin & Gift Management" subtitle="Configure virtual currency, gifts and revenue rules" />
+      <PageHeader title="Coin & Gift Management" subtitle="Configure coin packages, gifts and transaction logs" />
       <Tabs defaultValue="packages">
         <TabsList className="bg-[#1A1A1A] border border-white/5">
           <TabsTrigger value="packages">Coin Packages</TabsTrigger>
           <TabsTrigger value="gifts">Gift Catalog</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue Settings</TabsTrigger>
           <TabsTrigger value="logs">Transaction Logs</TabsTrigger>
         </TabsList>
 
@@ -571,32 +545,6 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
                 })}
               </div>
             )}
-          </Panel>
-        </TabsContent>
-
-        <TabsContent value="revenue" className="mt-4">
-          <Panel title="Revenue Settings">
-            <div className="max-w-xl space-y-4">
-              <div className="space-y-2">
-                <Label className="text-[#A0A0A0]">Diamond-to-Cash Conversion Rate</Label>
-                <div className="flex items-center bg-[#141414] border border-white/10 rounded-md h-9 px-3">
-                  <input
-                    value={conversion}
-                    onChange={(e) => setConversion(e.target.value)}
-                    inputMode="numeric"
-                    className="bg-transparent outline-none text-white w-full"
-                  />
-                  <span className="text-[#A0A0A0] ml-2 whitespace-nowrap text-sm">Diamonds = $1.00</span>
-                </div>
-              </div>
-              <Button
-                className="bg-[#84CC16] text-black font-bold hover:bg-[#84CC16]/90"
-                disabled={updateSettingsMutation.isPending || settingsQuery.isLoading}
-                onClick={saveSettings}
-              >
-                {updateSettingsMutation.isPending ? "Saving..." : "Save Settings"}
-              </Button>
-            </div>
           </Panel>
         </TabsContent>
 

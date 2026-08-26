@@ -7,6 +7,7 @@ import {
   useUpdateCreatorRequirementSettingsMutation,
   useMonetizationDashboardQuery,
 } from "../api/monetization.query";
+import { useAdminCoinSettingsQuery, useUpdateAdminCoinSettingsMutation } from "../api/coinGift.query";
 import { useAdminPlatformSettingsQuery, useUpdateAdminPlatformSettingsMutation } from "../api/settings.query";
 import type { CreatorRequirementSettings } from "../api/monetization";
 import { handleApiError } from "../api/client";
@@ -48,6 +49,8 @@ export function Monetization({ accessToken }: { accessToken: string }) {
   const releaseEarningsMutation = useReleasePendingCreatorEarningsMutation(accessToken);
   const settingsQuery = useAdminPlatformSettingsQuery(accessToken);
   const updateSettingsMutation = useUpdateAdminPlatformSettingsMutation(accessToken);
+  const coinSettingsQuery = useAdminCoinSettingsQuery(accessToken);
+  const updateCoinSettingsMutation = useUpdateAdminCoinSettingsMutation(accessToken);
   
   const dashboard = query.data;
   const platformSettings = settingsQuery.data;
@@ -55,6 +58,9 @@ export function Monetization({ accessToken }: { accessToken: string }) {
   const [requirements, setRequirements] = useState<CreatorRequirementSettings>(DEFAULT_REQUIREMENTS);
   const [creatorShare, setCreatorShare] = useState<number>(60);
   const [payoutRate, setPayoutRate] = useState<number>(3.5);
+  const [diamondsPerDollar, setDiamondsPerDollar] = useState<number>(100);
+  const [minWithdrawalUsd, setMinWithdrawalUsd] = useState<number>(10);
+  const [maxWithdrawalUsd, setMaxWithdrawalUsd] = useState<number>(5000);
 
   useEffect(() => {
     if (platformSettings) {
@@ -62,6 +68,14 @@ export function Monetization({ accessToken }: { accessToken: string }) {
       setPayoutRate(platformSettings.payoutPerThousandViewsUsd ?? 3.5);
     }
   }, [platformSettings]);
+
+  useEffect(() => {
+    if (coinSettingsQuery.data) {
+      setDiamondsPerDollar(coinSettingsQuery.data.coinsPerDollar ?? 100);
+      setMinWithdrawalUsd(coinSettingsQuery.data.minWithdrawalUsd ?? 10);
+      setMaxWithdrawalUsd(coinSettingsQuery.data.maxWithdrawalUsd ?? 5000);
+    }
+  }, [coinSettingsQuery.data]);
 
   useEffect(() => {
     if (dashboard?.creatorRequirements) {
@@ -77,12 +91,18 @@ export function Monetization({ accessToken }: { accessToken: string }) {
   };
 
   const saveRevenueSettings = () => {
-    updateSettingsMutation
-      .mutateAsync({
+    Promise.all([
+      updateSettingsMutation.mutateAsync({
         creatorSharePercentage: creatorShare,
         platformSharePercentage: 100 - creatorShare,
         payoutPerThousandViewsUsd: payoutRate,
-      })
+      }),
+      updateCoinSettingsMutation.mutateAsync({
+        coinsPerDollar: diamondsPerDollar,
+        minWithdrawalUsd,
+        maxWithdrawalUsd,
+      }),
+    ])
       .then(() => toast.success("Revenue share settings saved."))
       .catch((error) => toast.error(handleApiError(error, "Failed to save revenue settings.")));
   };
@@ -94,7 +114,7 @@ export function Monetization({ accessToken }: { accessToken: string }) {
       .catch((error) => toast.error(handleApiError(error, "Failed to release pending earnings.")));
   };
 
-  if (query.isLoading || settingsQuery.isLoading) {
+  if (query.isLoading || settingsQuery.isLoading || coinSettingsQuery.isLoading) {
     return (
       <div>
         <PageHeader title="Monetization & Revenue" subtitle="Track revenue streams and manage payouts" />
@@ -312,14 +332,62 @@ export function Monetization({ accessToken }: { accessToken: string }) {
               The amount paid out for every 1,000 qualified ad views.
             </p>
           </div>
+          <div>
+            <label className="text-sm text-white mb-2 block">
+              Diamond-to-Cash Conversion Rate
+            </label>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={diamondsPerDollar}
+              onChange={(e) => setDiamondsPerDollar(Math.max(1, Number(e.target.value) || 1))}
+              className="bg-[#141414] border-white/10 text-white"
+            />
+            <p className="text-xs text-[#A0A0A0] mt-1">
+              {diamondsPerDollar.toLocaleString()} diamonds = $1.00
+            </p>
+          </div>
+          <div>
+            <label className="text-sm text-white mb-2 block">
+              Minimum Withdrawal (USD)
+            </label>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={minWithdrawalUsd}
+              onChange={(e) => setMinWithdrawalUsd(Math.max(1, Number(e.target.value) || 1))}
+              className="bg-[#141414] border-white/10 text-white"
+            />
+            <p className="text-xs text-[#A0A0A0] mt-1">
+              App balance screen uses this minimum before creators can withdraw.
+            </p>
+          </div>
+          <div>
+            <label className="text-sm text-white mb-2 block">
+              Maximum Withdrawal (USD)
+            </label>
+            <Input
+              type="number"
+              min={minWithdrawalUsd}
+              step={1}
+              value={maxWithdrawalUsd}
+              onChange={(e) => setMaxWithdrawalUsd(Math.max(minWithdrawalUsd, Number(e.target.value) || minWithdrawalUsd))}
+              className="bg-[#141414] border-white/10 text-white"
+            />
+            <p className="text-xs text-[#A0A0A0] mt-1">
+              Keeps one payout request inside an admin-approved range.
+            </p>
+          </div>
         </div>
         <div className="mt-6">
           <Button
             className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
-            disabled={updateSettingsMutation.isPending}
+            disabled={updateSettingsMutation.isPending || updateCoinSettingsMutation.isPending}
             onClick={saveRevenueSettings}
           >
-            {updateSettingsMutation.isPending ? "Saving..." : "Save Settings"}
+            {updateSettingsMutation.isPending || updateCoinSettingsMutation.isPending ? "Saving..." : "Save Settings"}
           </Button>
         </div>
       </Panel>

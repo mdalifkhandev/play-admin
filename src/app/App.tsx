@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAdminMe, loginAdmin, logoutAdmin, refreshAdminSession, type AdminSession } from "./api/auth";
 import { Toaster } from "./components/ui/sonner";
-import { NAV_ITEMS, PageId, Sidebar } from "./components/Sidebar";
+import { canAccessPage, getDefaultPageForRole, NAV_ITEMS, PageId, Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { LoginScreen } from "./components/LoginScreen";
 import { Dashboard } from "./pages/Dashboard";
@@ -18,6 +18,7 @@ import { LiveManagement } from "./pages/LiveManagement";
 import { KidsMode } from "./pages/KidsMode";
 import { CoinGift } from "./pages/CoinGift";
 import { Notifications } from "./pages/Notifications";
+import { AdminAudit } from "./pages/AdminAudit";
 import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
 import { AdminNotifications } from "./pages/AdminNotifications";
@@ -28,10 +29,17 @@ export default function App() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [session, setSession] = useState<AdminSession | null>(() => getStoredSession());
   const title = page === "adminProfile" ? "Admin Profile" : page === "adminNotifications" ? "Admin Notifications" : NAV_ITEMS.find((n) => n.id === page)?.label ?? "Dashboard";
+  const role = session?.user.role;
 
   useEffect(() => {
     document.title = `${title} | Play Admin`;
   }, [title]);
+
+  useEffect(() => {
+    if (session && !canAccessPage(role, page)) {
+      setPage(getDefaultPageForRole(role));
+    }
+  }, [page, role, session]);
 
   useEffect(() => {
     const restore = async () => {
@@ -113,6 +121,15 @@ export default function App() {
     setSession(nextSession);
   };
 
+  const handleNavigate = (nextPage: PageId) => {
+    if (canAccessPage(role, nextPage)) {
+      setPage(nextPage);
+      return;
+    }
+
+    setPage(getDefaultPageForRole(role));
+  };
+
   if (!session) {
     return (
       <>
@@ -124,16 +141,16 @@ export default function App() {
 
   return (
     <div className="dark size-full min-h-screen flex bg-[#090909] text-white">
-      <Sidebar active={page} onNavigate={setPage} />
+      <Sidebar active={page} role={role} onNavigate={handleNavigate} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar
           title={title}
           user={session.user}
           accessToken={session.accessToken}
           onLogout={handleLogout}
-          onProfileClick={() => setPage("adminProfile")}
-          onNotificationsClick={() => setPage("adminNotifications")}
-          onNotificationNavigate={setPage}
+          onProfileClick={() => handleNavigate("adminProfile")}
+          onNotificationsClick={() => handleNavigate("adminNotifications")}
+          onNotificationNavigate={handleNavigate}
         />
         <main className="flex-1 overflow-y-auto p-6">
           {page === "adminProfile" ? (
@@ -166,6 +183,8 @@ export default function App() {
             <CoinGift accessToken={session.accessToken} />
           ) : page === "notifications" ? (
             <Notifications accessToken={session.accessToken} />
+          ) : page === "audit" ? (
+            <AdminAudit accessToken={session.accessToken} />
           ) : page === "settings" ? (
             <Settings accessToken={session.accessToken} />
           ) : page === "dashboard" ? (

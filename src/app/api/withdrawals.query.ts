@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   approveAdminWithdrawal,
+  completeAdminWithdrawal,
   listAdminWithdrawals,
   rejectAdminWithdrawal,
+  retryAdminWithdrawal,
   type AdminWithdrawalListParams,
 } from './withdrawals';
 import { dashboardQueryKeys } from './dashboard.query';
@@ -29,7 +31,7 @@ export function useApproveAdminWithdrawalMutation(accessToken: string) {
   return useMutation({
     mutationFn: ({ requestId, adminNotes }: { requestId: string; adminNotes?: string }) =>
       approveAdminWithdrawal(accessToken, requestId, adminNotes),
-    onSuccess: async () => {
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
@@ -45,7 +47,46 @@ export function useRejectAdminWithdrawalMutation(accessToken: string) {
   return useMutation({
     mutationFn: ({ requestId, reason }: { requestId: string; reason: string }) =>
       rejectAdminWithdrawal(accessToken, requestId, reason),
-    onSuccess: async () => {
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
+    },
+  });
+}
+
+export function useRetryAdminWithdrawalMutation(accessToken: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ requestId, adminNotes }: { requestId: string; adminNotes?: string }) =>
+      retryAdminWithdrawal(accessToken, requestId, adminNotes),
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: monetizationQueryKeys.all, refetchType: 'all' }),
+      ]);
+    },
+  });
+}
+
+export function useCompleteAdminWithdrawalMutation(accessToken: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      requestId,
+      stripeTransferId,
+      adminNotes,
+    }: {
+      requestId: string;
+      stripeTransferId?: string;
+      adminNotes?: string;
+    }) => completeAdminWithdrawal(accessToken, requestId, { stripeTransferId, adminNotes }),
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: withdrawalsQueryKeys.all, refetchType: 'all' }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all, refetchType: 'all' }),

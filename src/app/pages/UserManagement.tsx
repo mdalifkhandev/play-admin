@@ -14,6 +14,7 @@ import { handleApiError } from "../api/client";
 import { PageHeader, Panel, Pagination, StatusPill } from "../components/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
+import { ConfirmModal } from "../components/ui/confirm-modal";
 import {
   Select,
   SelectContent,
@@ -40,6 +41,13 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
   const [pageSize, setPageSize] = useState<number>(10);
   const [selected, setSelected] = useState<AdminManagedUser | null>(null);
   const [openActionUserId, setOpenActionUserId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    user: AdminManagedUser;
+    label: string;
+    description: string;
+    variant?: "default" | "destructive";
+    run: () => void;
+  } | null>(null);
 
   const queryParams = useMemo(
     () => ({ q: query, status, page, limit: pageSize }),
@@ -86,6 +94,22 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
       .catch((error) => {
         toast.error(handleApiError(error, "Action failed."));
       });
+  };
+
+  const confirmUserAction = (
+    targetUser: AdminManagedUser,
+    label: string,
+    description: string,
+    run: () => void,
+    variant: "default" | "destructive" = "default",
+  ) => {
+    setPendingAction({
+      user: targetUser,
+      label,
+      description,
+      run,
+      variant,
+    });
   };
 
   return (
@@ -222,7 +246,15 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                         type="button"
                         disabled={isActionLoading}
                         className="block w-full rounded-sm px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => handleUserAction(u, banMutation, "User banned successfully.")}
+                        onClick={() =>
+                          confirmUserAction(
+                            u,
+                            "Ban User",
+                            `Ban ${u.username}? They will lose access until an admin activates the account again.`,
+                            () => handleUserAction(u, banMutation, "User banned successfully."),
+                            "destructive",
+                          )
+                        }
                       >
                         Ban User
                       </button>
@@ -230,7 +262,15 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                         type="button"
                         disabled={isActionLoading}
                         className="block w-full rounded-sm px-3 py-2 text-left text-sm text-amber-400 hover:bg-amber-500/10 disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => handleUserAction(u, suspendMutation, "User suspended successfully.")}
+                        onClick={() =>
+                          confirmUserAction(
+                            u,
+                            "Suspend User",
+                            `Suspend ${u.username}? Their account will be blocked from normal activity.`,
+                            () => handleUserAction(u, suspendMutation, "User suspended successfully."),
+                            "destructive",
+                          )
+                        }
                       >
                         Suspend User
                       </button>
@@ -238,7 +278,14 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                         type="button"
                         disabled={isActionLoading}
                         className="block w-full rounded-sm px-3 py-2 text-left text-sm text-white hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => handleUserAction(u, warnMutation, "Warning sent successfully.")}
+                        onClick={() =>
+                          confirmUserAction(
+                            u,
+                            "Send Warning",
+                            `Send an account warning to ${u.username}?`,
+                            () => handleUserAction(u, warnMutation, "Warning sent successfully."),
+                          )
+                        }
                       >
                         Send Warning
                       </button>
@@ -314,7 +361,15 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(selected, banMutation, "User banned successfully.", { updateSheet: true })}
+                    onClick={() =>
+                      confirmUserAction(
+                        selected,
+                        "Ban User",
+                        `Ban ${selected.username}? They will lose access until an admin activates the account again.`,
+                        () => handleUserAction(selected, banMutation, "User banned successfully.", { updateSheet: true }),
+                        "destructive",
+                      )
+                    }
                   >
                     Ban User
                   </Button>
@@ -322,7 +377,15 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(selected, suspendMutation, "User suspended successfully.", { updateSheet: true })}
+                    onClick={() =>
+                      confirmUserAction(
+                        selected,
+                        "Suspend User",
+                        `Suspend ${selected.username}? Their account will be blocked from normal activity.`,
+                        () => handleUserAction(selected, suspendMutation, "User suspended successfully.", { updateSheet: true }),
+                        "destructive",
+                      )
+                    }
                   >
                     Suspend User
                   </Button>
@@ -330,7 +393,14 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
                     variant="outline"
                     className="border-white/15 text-white hover:bg-white/5 bg-transparent"
                     disabled={isActionLoading}
-                    onClick={() => handleUserAction(selected, warnMutation, "Warning sent successfully.", { updateSheet: true })}
+                    onClick={() =>
+                      confirmUserAction(
+                        selected,
+                        "Send Warning",
+                        `Send an account warning to ${selected.username}?`,
+                        () => handleUserAction(selected, warnMutation, "Warning sent successfully.", { updateSheet: true }),
+                      )
+                    }
                   >
                     Send Warning
                   </Button>
@@ -354,6 +424,18 @@ export function UserManagement({ accessToken }: { accessToken: string }) {
           )}
         </SheetContent>
       </Sheet>
+      <ConfirmModal
+        open={!!pendingAction}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+        title={pendingAction?.label ?? "Confirm action"}
+        description={pendingAction?.description ?? "Are you sure you want to continue?"}
+        confirmText={isActionLoading ? "Working..." : pendingAction?.label ?? "Confirm"}
+        variant={pendingAction?.variant}
+        onConfirm={() => {
+          pendingAction?.run();
+          setPendingAction(null);
+        }}
+      />
     </div>
   );
 }

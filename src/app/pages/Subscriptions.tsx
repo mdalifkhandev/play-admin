@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Panel, StatCard, StatusPill } from "../components/shared";
 import { Button } from "../components/ui/button";
+import { ConfirmModal } from "../components/ui/confirm-modal";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
@@ -73,6 +74,7 @@ export function Subscriptions({ accessToken }: { accessToken: string }) {
   const [activeTab, setActiveTab] = useState<"plans" | "subscribers">("plans");
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+  const [planToDelete, setPlanToDelete] = useState<AdminSubscriptionPlan | null>(null);
   const [form, setForm] = useState<PlanForm>(emptyForm);
   const [subscriberPage, setSubscriberPage] = useState(1);
   const [subscriberLimit, setSubscriberLimit] = useState(10);
@@ -347,7 +349,7 @@ export function Subscriptions({ accessToken }: { accessToken: string }) {
                         size="sm"
                         variant="outline"
                         className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                        onClick={() => handleDelete(plan.id)}
+                        onClick={() => setPlanToDelete(plan)}
                         disabled={Boolean(deletingPlanId)}
                       >
                         {deletingPlanId === plan.id ? (
@@ -529,6 +531,19 @@ export function Subscriptions({ accessToken }: { accessToken: string }) {
         )}
       </Panel>
       )}
+      <ConfirmModal
+        open={!!planToDelete}
+        onOpenChange={(open) => !open && setPlanToDelete(null)}
+        title="Delete Subscription Plan"
+        description={`Delete ${planToDelete?.name || "this plan"}? Existing payment history will remain, but this plan will no longer be available.`}
+        confirmText={deletingPlanId ? "Deleting..." : "Delete"}
+        variant="destructive"
+        onConfirm={() => {
+          if (planToDelete) {
+            void handleDelete(planToDelete.id).then(() => setPlanToDelete(null));
+          }
+        }}
+      />
     </div>
   );
 }

@@ -4,12 +4,15 @@ import { toast } from "sonner";
 import {
   useAdminWithdrawalsQuery,
   useApproveAdminWithdrawalMutation,
+  useCompleteAdminWithdrawalMutation,
   useRejectAdminWithdrawalMutation,
+  useRetryAdminWithdrawalMutation,
 } from "../api/withdrawals.query";
 import type { AdminWithdrawal, WithdrawalStatus } from "../api/withdrawals";
 import { handleApiError } from "../api/client";
 import { ApproveButton, PageHeader, Panel, Pagination, RejectButton, StatusPill } from "../components/shared";
 import { Button } from "../components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -19,6 +22,7 @@ import {
 } from "../components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Textarea } from "../components/ui/textarea";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { formatMoney, kycSubmissions } from "../data";
 
@@ -46,7 +50,18 @@ function displayStatus(status: AdminWithdrawal["status"]) {
   if (status === "processing") return "Processing";
   if (status === "completed") return "Completed";
   if (status === "rejected") return "Rejected";
+  if (status === "failed") return "Failed";
   return status;
+}
+
+type ReviewAction = "approve" | "reject" | "retry" | "complete";
+
+function displayReviewAction(action?: ReviewAction) {
+  if (action === "approve") return "Approve";
+  if (action === "reject") return "Reject";
+  if (action === "retry") return "Retry";
+  if (action === "complete") return "Complete";
+  return "Review";
 }
 
 function formatDate(value?: string) {
@@ -60,6 +75,12 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
   const [pendingPage, setPendingPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyStatus, setHistoryStatus] = useState<WithdrawalStatus>("all");
+  const [reviewState, setReviewState] = useState<{
+    withdrawal: AdminWithdrawal;
+    action: ReviewAction;
+    note: string;
+    stripeTransferId: string;
+  } | null>(null);
   const pendingParams = useMemo(
     () => ({ status: "pending" as WithdrawalStatus, page: pendingPage, limit: PAGE_SIZE }),
     [pendingPage],
@@ -72,26 +93,91 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
   const historyQuery = useAdminWithdrawalsQuery(accessToken, historyParams);
   const approveMutation = useApproveAdminWithdrawalMutation(accessToken);
   const rejectMutation = useRejectAdminWithdrawalMutation(accessToken);
-  const isReviewing = approveMutation.isPending || rejectMutation.isPending;
+  const retryMutation = useRetryAdminWithdrawalMutation(accessToken);
+  const completeMutation = useCompleteAdminWithdrawalMutation(accessToken);
+  const isReviewing =
+    approveMutation.isPending ||
+    rejectMutation.isPending ||
+    retryMutation.isPending ||
+    completeMutation.isPending;
 
   const approveWithdrawal = (withdrawal: AdminWithdrawal) => {
-    const adminNotes = window.prompt("Approval note (optional)", withdrawal.adminNotes || "");
-    if (adminNotes === null) return;
-
-    approveMutation
-      .mutateAsync({ requestId: withdrawal.id, adminNotes: adminNotes.trim() || undefined })
-      .then(() => toast.success("Withdrawal approved and transfer started."))
-      .catch((error) => toast.error(handleApiError(error, "Failed to approve withdrawal.")));
+    setReviewState({ withdrawal, action: "approve", note: withdrawal.adminNotes || "", stripeTransferId: "" });
   };
 
   const rejectWithdrawal = (withdrawal: AdminWithdrawal) => {
-    const reason = window.prompt("Reject reason", withdrawal.adminNotes || "");
-    if (!reason?.trim()) return;
+    setReviewState({ withdrawal, action: "reject", note: withdrawal.adminNotes || "", stripeTransferId: "" });
+  };
 
-    rejectMutation
-      .mutateAsync({ requestId: withdrawal.id, reason: reason.trim() })
-      .then(() => toast.success("Withdrawal rejected and balance refunded."))
-      .catch((error) => toast.error(handleApiError(error, "Failed to reject withdrawal.")));
+  const retryWithdrawal = (withdrawal: AdminWithdrawal) => {
+    setReviewState({ withdrawal, action: "retry", note: withdrawal.adminNotes || "", stripeTransferId: "" });
+  };
+
+  const completeWithdrawal = (withdrawal: AdminWithdrawal) => {
+    setReviewState({
+      withdrawal,
+      action: "complete",
+      note: withdrawal.adminNotes || "",
+      stripeTransferId: withdrawal.stripeTransferId || "",
+    });
+  };
+
+  const submitReview = () => {
+    if (!reviewState || isReviewing) return;
+
+    if (reviewState.action === "reject" && !reviewState.note.trim()) {
+      toast.error("Reject reason is required.");
+      return;
+    }
+
+    const note = reviewState.note.trim() || undefined;
+    const mutation = (() => {
+      if (reviewState.action === "approve") {
+        return approveMutation.mutateAsync({
+          requestId: reviewState.withdrawal.id,
+          adminNotes: note,
+        });
+      }
+      if (reviewState.action === "retry") {
+        return retryMutation.mutateAsync({
+          requestId: reviewState.withdrawal.id,
+          adminNotes: note,
+        });
+      }
+      if (reviewState.action === "complete") {
+        return completeMutation.mutateAsync({
+          requestId: reviewState.withdrawal.id,
+          stripeTransferId: reviewState.stripeTransferId.trim() || undefined,
+          adminNotes: note,
+        });
+      }
+      return rejectMutation.mutateAsync({
+        requestId: reviewState.withdrawal.id,
+        reason: reviewState.note.trim(),
+      });
+    })();
+
+    mutation
+      .then(() => {
+        const successMessage =
+          reviewState.action === "approve"
+            ? "Withdrawal approved and transfer started."
+            : reviewState.action === "retry"
+              ? "Withdrawal retry completed."
+              : reviewState.action === "complete"
+                ? "Withdrawal marked completed."
+                : "Withdrawal rejected and balance refunded.";
+        toast.success(successMessage);
+        setReviewState(null);
+      })
+      .catch((error) =>
+        toast.error(
+          handleApiError(
+            error,
+            `Failed to ${reviewState.action} withdrawal.`,
+          ),
+        ),
+      );
   };
 
   return (
@@ -134,6 +220,8 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
             showActions
             onApprove={approveWithdrawal}
             onReject={rejectWithdrawal}
+            onRetry={retryWithdrawal}
+            onComplete={completeWithdrawal}
           />
           {pendingQuery.data && pendingQuery.data.pagination.totalPages > 1 && (
             <Pagination
@@ -184,6 +272,7 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
                   <SelectItem value="processing">Processing</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -210,9 +299,11 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
             isLoading={historyQuery.isLoading}
             emptyText="No withdrawal history found."
             isReviewing={isReviewing}
-            showActions={historyStatus === "pending"}
+            showActions
             onApprove={approveWithdrawal}
             onReject={rejectWithdrawal}
+            onRetry={retryWithdrawal}
+            onComplete={completeWithdrawal}
           />
           {historyQuery.data && historyQuery.data.pagination.totalPages > 1 && (
             <Pagination
@@ -223,6 +314,65 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
           )}
         </TabsContent>
       </Tabs>
+      <Dialog open={!!reviewState} onOpenChange={(open) => !open && setReviewState(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{reviewState ? `${displayReviewAction(reviewState.action)} Withdrawal` : "Review Withdrawal"}</DialogTitle>
+            <DialogDescription>
+              {reviewState?.action === "approve"
+                ? "Confirm this payout request. Stripe transfer will be started when approved."
+                : reviewState?.action === "retry"
+                  ? "Retry the failed Stripe payout. The creator balance stays held unless you reject it."
+                  : reviewState?.action === "complete"
+                    ? "Use this only after you have verified the payout externally."
+                    : "Confirm rejection. The creator balance will be refunded after rejection."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-[#A0A0A0]">
+              <div className="text-white">{reviewState ? displayCreator(reviewState.withdrawal) : "Creator"}</div>
+              <div>{reviewState ? formatMoney(reviewState.withdrawal.amountUsd) : "$0.00"}</div>
+              {reviewState?.withdrawal.failureReason && (
+                <div className="mt-2 text-red-300">Failure: {reviewState.withdrawal.failureReason}</div>
+              )}
+            </div>
+            {reviewState?.action === "complete" && (
+              <input
+                value={reviewState.stripeTransferId}
+                onChange={(event) =>
+                  setReviewState((current) =>
+                    current ? { ...current, stripeTransferId: event.target.value } : current,
+                  )
+                }
+                placeholder="Stripe transfer id or external reference"
+                className="h-10 w-full rounded-md border border-white/10 bg-[#111] px-3 text-sm text-white outline-none"
+              />
+            )}
+            <Textarea
+              value={reviewState?.note ?? ""}
+              onChange={(event) => setReviewState((current) => (current ? { ...current, note: event.target.value } : current))}
+              placeholder={reviewState?.action === "reject" ? "Reject reason" : "Admin note (optional)"}
+              className="min-h-24 bg-[#111] border-white/10"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" className="border-white/10 bg-transparent hover:bg-white/5" onClick={() => setReviewState(null)}>
+                Cancel
+              </Button>
+              <Button
+                className={
+                  reviewState?.action === "reject"
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : "bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
+                }
+                disabled={isReviewing}
+                onClick={submitReview}
+              >
+                {isReviewing ? "Working..." : reviewState?.action === "reject" ? "Reject" : reviewState?.action === "retry" ? "Retry" : reviewState?.action === "complete" ? "Complete" : "Approve"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -235,6 +385,8 @@ function WithdrawalTable({
   showActions,
   onApprove,
   onReject,
+  onRetry,
+  onComplete,
 }: {
   withdrawals: AdminWithdrawal[];
   isLoading: boolean;
@@ -243,6 +395,8 @@ function WithdrawalTable({
   showActions: boolean;
   onApprove: (withdrawal: AdminWithdrawal) => void;
   onReject: (withdrawal: AdminWithdrawal) => void;
+  onRetry: (withdrawal: AdminWithdrawal) => void;
+  onComplete: (withdrawal: AdminWithdrawal) => void;
 }) {
   return (
     <Panel>
@@ -296,6 +450,24 @@ function WithdrawalTable({
                   <div className="flex justify-end gap-2">
                     <ApproveButton disabled={isReviewing} onClick={() => onApprove(withdrawal)}>
                       Approve
+                    </ApproveButton>
+                    <RejectButton disabled={isReviewing} onClick={() => onReject(withdrawal)}>
+                      Reject
+                    </RejectButton>
+                  </div>
+                ) : showActions && withdrawal.status === "failed" ? (
+                  <div className="flex justify-end gap-2">
+                    <ApproveButton disabled={isReviewing} onClick={() => onRetry(withdrawal)}>
+                      Retry
+                    </ApproveButton>
+                    <RejectButton disabled={isReviewing} onClick={() => onReject(withdrawal)}>
+                      Reject
+                    </RejectButton>
+                  </div>
+                ) : showActions && (withdrawal.status === "approved" || withdrawal.status === "processing") ? (
+                  <div className="flex justify-end gap-2">
+                    <ApproveButton disabled={isReviewing} onClick={() => onComplete(withdrawal)}>
+                      Complete
                     </ApproveButton>
                     <RejectButton disabled={isReviewing} onClick={() => onReject(withdrawal)}>
                       Reject
