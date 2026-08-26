@@ -6,10 +6,6 @@ export interface PlatformLanguage {
   active: boolean;
 }
 
-export interface PlatformPayoutRate {
-  region: string;
-  rateUsd: number;
-}
 
 export interface PlatformFeatureFlags {
   liveStreaming: boolean;
@@ -27,7 +23,8 @@ export interface PlatformSettings {
   maintenanceMessage: string;
   videosBetweenAds: number;
   payoutPerThousandViewsUsd: number;
-  payoutRates: PlatformPayoutRate[];
+  creatorSharePercentage: number;
+  platformSharePercentage: number;
   languages: PlatformLanguage[];
   featureFlags: PlatformFeatureFlags;
   updatedAt: string;

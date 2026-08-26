@@ -90,7 +90,7 @@ export function Withdrawals({ accessToken }: { accessToken: string }) {
 
     rejectMutation
       .mutateAsync({ requestId: withdrawal.id, reason: reason.trim() })
-      .then(() => toast.success("Withdrawal rejected and coins refunded."))
+      .then(() => toast.success("Withdrawal rejected and balance refunded."))
       .catch((error) => toast.error(handleApiError(error, "Failed to reject withdrawal.")));
   };
 

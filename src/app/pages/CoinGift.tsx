@@ -169,8 +169,8 @@ export function CoinGift({ accessToken }: { accessToken: string }) {
     updateSettingsMutation.mutate(
       {
         coinsPerDollar: Number(conversion) || 100,
-        minWithdrawalCoins: settingsQuery.data?.minWithdrawalCoins ?? 1000,
-        maxWithdrawalCoins: settingsQuery.data?.maxWithdrawalCoins ?? 500000,
+        minWithdrawalUsd: settingsQuery.data?.minWithdrawalUsd ?? 10,
+        maxWithdrawalUsd: settingsQuery.data?.maxWithdrawalUsd ?? 5000,
       },
       {
         onSuccess: () => toast.success("Revenue settings saved"),

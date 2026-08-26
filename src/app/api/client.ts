@@ -45,10 +45,12 @@ apiClient.interceptors.response.use(
       });
     }
 
+    const isTokenError = errorCode === 'ACCESS_TOKEN_INVALID' || errorCode === 'SESSION_REVOKED' || errorCode === 'ACCESS_TOKEN_REQUIRED';
+
     if (
       !originalRequest ||
       error.response?.status !== 401 ||
-      errorCode !== 'ACCESS_TOKEN_INVALID' ||
+      !isTokenError ||
       originalRequest._retry ||
       originalRequest.url?.includes('/auth/refresh')
     ) {

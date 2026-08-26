@@ -18,12 +18,8 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   maintenanceMessage: "Play is under maintenance. Please try again soon.",
   videosBetweenAds: 6,
   payoutPerThousandViewsUsd: 3.5,
-  payoutRates: [
-    { region: "North America", rateUsd: 4.2 },
-    { region: "Europe", rateUsd: 3.8 },
-    { region: "Asia Pacific", rateUsd: 2.1 },
-    { region: "Latin America", rateUsd: 1.6 },
-  ],
+  creatorSharePercentage: 60,
+  platformSharePercentage: 40,
   languages: [
     { code: "en", name: "English", active: true },
     { code: "bn", name: "Bangla", active: true },
@@ -161,18 +157,7 @@ export function Settings({ accessToken }: { accessToken: string }) {
         </div>
       </Panel>
 
-      <Panel
-        title="Payout Rate"
-        action={<SaveButton section="payout" input={{ payoutPerThousandViewsUsd: settings.payoutPerThousandViewsUsd }} />}
-      >
-        <div className="max-w-xs space-y-2">
-          <Label className="text-[#A0A0A0]">Per 1,000 views</Label>
-          <div className="flex items-center gap-2">
-            <Input type="number" min={0} step="0.01" value={settings.payoutPerThousandViewsUsd} onChange={(event) => setSettings((current) => ({ ...current, payoutPerThousandViewsUsd: Math.max(0, Number(event.target.value) || 0) }))} className="bg-[#141414] border-white/10 text-white" />
-            <span className="text-sm text-[#A0A0A0] whitespace-nowrap">USD</span>
-          </div>
-        </div>
-      </Panel>
+
 
       <Panel title="Language Management" action={<Button size="sm" className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90" onClick={() => setSettings((current) => ({ ...current, languages: [...current.languages, { code: "", name: "", active: true }] }))}><Plus className="size-4" /> Add Language</Button>}>
         <div className="divide-y divide-white/5">

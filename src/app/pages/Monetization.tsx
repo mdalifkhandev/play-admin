@@ -7,6 +7,7 @@ import {
   useUpdateCreatorRequirementSettingsMutation,
   useMonetizationDashboardQuery,
 } from "../api/monetization.query";
+import { useAdminPlatformSettingsQuery, useUpdateAdminPlatformSettingsMutation } from "../api/settings.query";
 import type { CreatorRequirementSettings } from "../api/monetization";
 import { handleApiError } from "../api/client";
 import { PageHeader, Panel, StatCard, StatusPill } from "../components/shared";
@@ -45,8 +46,22 @@ export function Monetization({ accessToken }: { accessToken: string }) {
   const query = useMonetizationDashboardQuery(accessToken);
   const updateRequirementsMutation = useUpdateCreatorRequirementSettingsMutation(accessToken);
   const releaseEarningsMutation = useReleasePendingCreatorEarningsMutation(accessToken);
+  const settingsQuery = useAdminPlatformSettingsQuery(accessToken);
+  const updateSettingsMutation = useUpdateAdminPlatformSettingsMutation(accessToken);
+  
   const dashboard = query.data;
+  const platformSettings = settingsQuery.data;
+
   const [requirements, setRequirements] = useState<CreatorRequirementSettings>(DEFAULT_REQUIREMENTS);
+  const [creatorShare, setCreatorShare] = useState<number>(60);
+  const [payoutRate, setPayoutRate] = useState<number>(3.5);
+
+  useEffect(() => {
+    if (platformSettings) {
+      setCreatorShare(platformSettings.creatorSharePercentage ?? 60);
+      setPayoutRate(platformSettings.payoutPerThousandViewsUsd ?? 3.5);
+    }
+  }, [platformSettings]);
 
   useEffect(() => {
     if (dashboard?.creatorRequirements) {
@@ -61,6 +76,17 @@ export function Monetization({ accessToken }: { accessToken: string }) {
       .catch((error) => toast.error(handleApiError(error, "Failed to save creator requirements.")));
   };
 
+  const saveRevenueSettings = () => {
+    updateSettingsMutation
+      .mutateAsync({
+        creatorSharePercentage: creatorShare,
+        platformSharePercentage: 100 - creatorShare,
+        payoutPerThousandViewsUsd: payoutRate,
+      })
+      .then(() => toast.success("Revenue share settings saved."))
+      .catch((error) => toast.error(handleApiError(error, "Failed to save revenue settings.")));
+  };
+
   const releasePendingEarnings = () => {
     releaseEarningsMutation
       .mutateAsync()
@@ -68,7 +94,7 @@ export function Monetization({ accessToken }: { accessToken: string }) {
       .catch((error) => toast.error(handleApiError(error, "Failed to release pending earnings.")));
   };
 
-  if (query.isLoading) {
+  if (query.isLoading || settingsQuery.isLoading) {
     return (
       <div>
         <PageHeader title="Monetization & Revenue" subtitle="Track revenue streams and manage payouts" />
@@ -245,6 +271,55 @@ export function Monetization({ accessToken }: { accessToken: string }) {
             onClick={saveRequirements}
           >
             {updateRequirementsMutation.isPending ? "Saving..." : "Save Requirements"}
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel title="Revenue Share Settings" className="mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm text-white mb-2 block">
+              Creator Share Percentage ({creatorShare}%)
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={creatorShare}
+              onChange={(e) => setCreatorShare(Number(e.target.value))}
+              className="w-full accent-[#84CC16]"
+            />
+            <div className="flex justify-between text-xs text-[#A0A0A0] mt-1">
+              <span>0%</span>
+              <span>Platform gets {100 - creatorShare}%</span>
+              <span>100%</span>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm text-white mb-2 block">
+              Ad Payout Rate per 1,000 Views (USD)
+            </label>
+            <Input
+              type="number"
+              min={0}
+              step={0.1}
+              value={payoutRate}
+              onChange={(e) => setPayoutRate(Number(e.target.value))}
+              className="bg-[#141414] border-white/10 text-white"
+            />
+            <p className="text-xs text-[#A0A0A0] mt-1">
+              The amount paid out for every 1,000 qualified ad views.
+            </p>
+          </div>
+        </div>
+        <div className="mt-6">
+          <Button
+            className="bg-[#84CC16] text-black hover:bg-[#84CC16]/90"
+            disabled={updateSettingsMutation.isPending}
+            onClick={saveRevenueSettings}
+          >
+            {updateSettingsMutation.isPending ? "Saving..." : "Save Settings"}
           </Button>
         </div>
       </Panel>

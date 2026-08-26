@@ -28,7 +28,7 @@ type AuthResponse = {
 
 export async function loginAdmin(email: string, password: string): Promise<AdminSession> {
   const data = getApiData<AuthResponse>(
-    await apiClient.post('/auth/login', { email, password, rememberMe: true }),
+    await apiClient.post('/auth/admin-login', { email, password, rememberMe: true }),
   );
 
   assertAdmin(data.user);
@@ -116,7 +116,8 @@ export async function logoutAdmin(refreshToken?: string, accessToken?: string): 
 }
 
 function assertAdmin(user: AdminUser) {
-  if (user.role !== 'admin') {
+  const allowedRoles = ['admin', 'moderator', 'support', 'finance'];
+  if (!allowedRoles.includes(user.role)) {
     throw new Error('Only admin accounts can access this dashboard.');
   }
 }

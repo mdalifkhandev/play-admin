@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useModerationReportsQuery, useReviewModerationReportMutation } from "../api/moderation.query";
@@ -8,6 +9,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { ConfirmModal } from "../components/ui/confirm-modal";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 
 const targetLabels: Record<ModerationTargetType, string> = {
@@ -183,16 +185,44 @@ function ActionButtons({
   onAction: (action: ModerationAction) => void;
 }) {
   const isUserTarget = report.targetType === "user" || report.targetType === "profile";
+  const [confirmState, setConfirmState] = useState<{ open: boolean; action: ModerationAction | null }>({ open: false, action: null });
+
+  const handleActionClick = (action: ModerationAction) => {
+    if (action === "keep") {
+      onAction(action);
+    } else {
+      setConfirmState({ open: true, action });
+    }
+  };
+
+  const actionLabels: Record<ModerationAction, string> = {
+    remove: isUserTarget ? "Suspend" : "Remove",
+    warn: "Warn",
+    ban: "Ban",
+    keep: "Ignore",
+    suspend: "Suspend"
+  };
 
   return (
-    <div className="flex justify-end gap-2">
-      <Button size="sm" className="bg-red-500 text-white hover:bg-red-500/90" disabled={isLoading} onClick={() => onAction("remove")}>
-        {isUserTarget ? "Suspend" : "Remove"}
-      </Button>
-      <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent" disabled={isLoading} onClick={() => onAction("warn")}>Warn</Button>
-      <Button size="sm" variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent" disabled={isLoading} onClick={() => onAction("ban")}>Ban</Button>
-      <Button size="sm" variant="outline" className="border-white/15 text-[#A0A0A0] hover:bg-white/5 bg-transparent" disabled={isLoading} onClick={() => onAction("keep")}>Ignore</Button>
-    </div>
+    <>
+      <div className="flex justify-end gap-2">
+        <Button size="sm" className="bg-red-500 text-white hover:bg-red-500/90" disabled={isLoading} onClick={() => handleActionClick("remove")}>
+          {actionLabels.remove}
+        </Button>
+        <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-transparent" disabled={isLoading} onClick={() => handleActionClick("warn")}>Warn</Button>
+        <Button size="sm" variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-500/10 bg-transparent" disabled={isLoading} onClick={() => handleActionClick("ban")}>Ban</Button>
+        <Button size="sm" variant="outline" className="border-white/15 text-[#A0A0A0] hover:bg-white/5 bg-transparent" disabled={isLoading} onClick={() => handleActionClick("keep")}>Ignore</Button>
+      </div>
+
+      <ConfirmModal
+        open={confirmState.open}
+        onOpenChange={(open) => setConfirmState({ ...confirmState, open })}
+        title={`Confirm ${confirmState.action ? actionLabels[confirmState.action] : ""}`}
+        description={`Are you sure you want to ${confirmState.action ? actionLabels[confirmState.action].toLowerCase() : ""} this?`}
+        onConfirm={() => confirmState.action && onAction(confirmState.action)}
+        variant={confirmState.action === 'warn' ? 'default' : 'destructive'}
+      />
+    </>
   );
 }
 

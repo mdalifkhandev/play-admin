@@ -24,8 +24,8 @@ export type AdminGift = {
 
 export type AdminCoinSettings = {
   coinsPerDollar: number;
-  minWithdrawalCoins: number;
-  maxWithdrawalCoins: number;
+  minWithdrawalUsd: number;
+  maxWithdrawalUsd: number;
   updatedAt?: string;
 };
 
