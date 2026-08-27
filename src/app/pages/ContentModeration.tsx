@@ -30,10 +30,11 @@ export function ContentModeration({ accessToken }: { accessToken: string }) {
           <TabsTrigger value="comment">Reported Comments</TabsTrigger>
           <TabsTrigger value="user">Reported Users</TabsTrigger>
           <TabsTrigger value="profile">Reported Profiles</TabsTrigger>
+          <TabsTrigger value="live_stream">Reported Live</TabsTrigger>
           <TabsTrigger value="log">Violation Log</TabsTrigger>
         </TabsList>
 
-        {(["reel", "comment", "user", "profile"] as const).map((targetType) => (
+        {(["reel", "comment", "user", "profile", "live_stream"] as const).map((targetType) => (
           <TabsContent key={targetType} value={targetType} className="mt-4">
             {targetType === "reel" ? (
               <ReportedReels accessToken={accessToken} targetType={targetType} />
