@@ -15,6 +15,7 @@ import { Withdrawals } from "./pages/Withdrawals";
 import { Subscriptions } from "./pages/Subscriptions";
 import { Rewards } from "./pages/Rewards";
 import { LiveManagement } from "./pages/LiveManagement";
+import { MusicManagement } from "./pages/MusicManagement";
 import { KidsMode } from "./pages/KidsMode";
 import { CoinGift } from "./pages/CoinGift";
 import { Notifications } from "./pages/Notifications";
@@ -177,6 +178,8 @@ export default function App() {
             <Rewards accessToken={session.accessToken} />
           ) : page === "live" ? (
             <LiveManagement accessToken={session.accessToken} />
+          ) : page === "music" ? (
+            <MusicManagement />
           ) : page === "kids" ? (
             <KidsMode accessToken={session.accessToken} />
           ) : page === "coins" ? (
