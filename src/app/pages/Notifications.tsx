@@ -617,6 +617,7 @@ function HistoryTab({ accessToken }: { accessToken: string }) {
             <TableHead className="text-[#A0A0A0]">Title</TableHead>
             <TableHead className="text-[#A0A0A0]">Recipient</TableHead>
             <TableHead className="text-[#A0A0A0]">Type</TableHead>
+            <TableHead className="text-[#A0A0A0]">Delivery</TableHead>
             <TableHead className="text-[#A0A0A0]">Read</TableHead>
             <TableHead className="text-[#A0A0A0]">Date</TableHead>
             <TableHead className="text-right text-[#A0A0A0]">Actions</TableHead>
@@ -624,25 +625,29 @@ function HistoryTab({ accessToken }: { accessToken: string }) {
         </TableHeader>
         <TableBody>
           {historyQuery.isLoading ? (
-            <LoadingRow colSpan={6} label="Loading notification history..." />
+            <LoadingRow colSpan={7} label="Loading notification history..." />
           ) : historyQuery.data?.items.length ? (
-            historyQuery.data.items.map((item, index) => (
-              <TableRow key={item.id} className={`border-white/5 hover:bg-white/5 ${index % 2 ? "bg-white/[0.02]" : ""}`}>
-                <TableCell className="text-white">{item.title || item.body || "Notification"}</TableCell>
-                <TableCell className="text-[#A0A0A0]">{item.recipient?.email || item.recipient?.name || "-"}</TableCell>
-                <TableCell className="text-[#A0A0A0]">{formatType(item.type)}</TableCell>
-                <TableCell><StatusPill status={item.isRead ? "Read" : "Unread"} /></TableCell>
-                <TableCell className="text-[#A0A0A0]">{formatDate(item.createdAt)}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="outline" size="sm" className="border-white/10 bg-transparent hover:bg-white/5" onClick={() => openEdit(item)}>
-                    <Edit3 className="size-4" />
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
+            historyQuery.data.items.map((item, index) => {
+              const delivery = getDeliverySummary(item);
+              return (
+                <TableRow key={item.id} className={`border-white/5 hover:bg-white/5 ${index % 2 ? "bg-white/[0.02]" : ""}`}>
+                  <TableCell className="text-white">{item.title || item.body || "Notification"}</TableCell>
+                  <TableCell className="text-[#A0A0A0]">{item.recipient?.email || item.recipient?.name || "-"}</TableCell>
+                  <TableCell className="text-[#A0A0A0]">{formatType(item.type)}</TableCell>
+                  <TableCell className="text-[#A0A0A0]">{delivery}</TableCell>
+                  <TableCell><StatusPill status={item.isRead ? "Read" : "Unread"} /></TableCell>
+                  <TableCell className="text-[#A0A0A0]">{formatDate(item.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm" className="border-white/10 bg-transparent hover:bg-white/5" onClick={() => openEdit(item)}>
+                      <Edit3 className="size-4" />
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           ) : (
-            <EmptyRow colSpan={6} label="No notifications found." />
+            <EmptyRow colSpan={7} label="No notifications found." />
           )}
         </TableBody>
       </Table>
@@ -763,6 +768,23 @@ function formatSendAudience(audience: AdminNotificationAudience) {
   if (audience === "premium") return "premium users";
   if (audience === "kids") return "kids mode users";
   return "the selected user";
+}
+
+function getDeliverySummary(item: AdminNotificationHistoryItem) {
+  const delivery = item.data?.delivery;
+  if (!delivery || typeof delivery !== "object") return "-";
+
+  const summary = delivery as {
+    targetedDeviceCount?: number;
+    successCount?: number;
+    failureCount?: number;
+  };
+  const devices = Number(summary.targetedDeviceCount || 0);
+  const success = Number(summary.successCount || 0);
+  const failed = Number(summary.failureCount || 0);
+
+  if (devices <= 0) return "0 devices";
+  return failed > 0 ? `${success}/${devices} sent, ${failed} failed` : `${success}/${devices} sent`;
 }
 
 function formatDate(value?: string) {
