@@ -36,6 +36,8 @@ export type AdCampaign = {
   title: string | null;
   description: string | null;
   destinationUrl: string | null;
+  ctaType: 'none' | 'learn_more' | 'send_message';
+  ctaLabel: string | null;
   status: AdCampaignStatus;
   adminReason: string | null;
   startsAt: string | null;
