@@ -119,7 +119,7 @@ export function LiveManagement({ accessToken }: LiveManagementProps) {
                         <div className="h-full w-full flex flex-col items-center justify-center bg-white/[0.03] text-[#A0A0A0]">
                           <PlayCircle className="mb-2 size-8 text-[#84CC16]" />
                           <span className="px-4 text-center text-xs">
-                            {stream.recording?.errorMessage || "Recording file is processing"}
+                            {recordingMessage(stream)}
                           </span>
                         </div>
                       )}
@@ -268,4 +268,12 @@ function getRecordingUrl(fileList: unknown): string | undefined {
 
 function isVideoUrl(value: string) {
   return /^https?:\/\//i.test(value) && /\.(mp4|m3u8|mov|webm)(\?|$)/i.test(value);
+}
+
+function recordingMessage(stream: AdminLiveStream) {
+  if (stream.recording?.errorMessage) return stream.recording.errorMessage;
+  if (stream.recording?.status === "disabled") return "Recording is disabled on the backend.";
+  if (stream.recording?.status === "failed") return "Recording failed.";
+  if (stream.recording?.status === "stopped") return "Recording finished, but no playable video URL was found.";
+  return "Recording file is processing.";
 }
