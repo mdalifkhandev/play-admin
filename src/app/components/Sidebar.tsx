@@ -16,6 +16,7 @@ import {
   Coins,
   FileText,
   ShieldCheck,
+  Headphones,
 } from "lucide-react";
 import { cn } from "./ui/utils";
 import logo from "../../assets/logo.png";
@@ -36,6 +37,7 @@ export const NAV_ITEMS = [
   { id: "kids", label: "Kids Mode Management", icon: Baby, roles: ["admin", "moderator"] },
   { id: "coins", label: "Coin & Gift Management", icon: Coins, roles: ["admin", "finance"] },
   { id: "notifications", label: "Notifications", icon: Bell, roles: ["admin", "moderator"] },
+  { id: "support", label: "Support Requests", icon: Headphones, roles: ["admin", "moderator", "support"] },
   { id: "audit", label: "Admin Audit Logs", icon: ShieldCheck, roles: ["admin"] },
   { id: "settings", label: "Settings", icon: Settings, roles: ["admin"] },
 ] as const;

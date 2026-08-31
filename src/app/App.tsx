@@ -19,6 +19,7 @@ import { MusicManagement } from "./pages/MusicManagement";
 import { KidsMode } from "./pages/KidsMode";
 import { CoinGift } from "./pages/CoinGift";
 import { Notifications } from "./pages/Notifications";
+import { SupportRequests } from "./pages/SupportRequests";
 import { AdminAudit } from "./pages/AdminAudit";
 import { Settings } from "./pages/Settings";
 import { AdminProfile } from "./pages/AdminProfile";
@@ -186,6 +187,8 @@ export default function App() {
             <CoinGift accessToken={session.accessToken} />
           ) : page === "notifications" ? (
             <Notifications accessToken={session.accessToken} />
+          ) : page === "support" ? (
+            <SupportRequests accessToken={session.accessToken} />
           ) : page === "audit" ? (
             <AdminAudit accessToken={session.accessToken} />
           ) : page === "settings" ? (
