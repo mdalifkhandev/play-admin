@@ -31,6 +31,38 @@ export type CreatorApplication = {
   };
 };
 
+export type CreatorAnalyticsRange = '7d' | '28d' | '60d' | '90d';
+
+export type CreatorAnalytics = {
+  range: CreatorAnalyticsRange;
+  summary: {
+    reels: number;
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+    followers: number;
+    newFollowers: number;
+    engagementRate: number;
+    earningsUsd: number;
+    pendingEarningsUsd: number;
+    availableEarningsUsd: number;
+  };
+  trend: Array<{ date: string; views: number; likes: number; comments: number; shares: number; saves: number }>;
+  topReels: Array<{
+    id: string;
+    title: string;
+    thumbnailUrl?: string;
+    views: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+    publishedAt: string | null;
+  }>;
+};
+
 export async function listCreatorApplications(
   accessToken: string,
   status?: CreatorApplicationStatus,
@@ -78,6 +110,19 @@ export async function holdCreatorApplication(
   return getApiData<{ id: string; status: CreatorApplicationStatus }>(
     await apiClient.patch(`/admin/creators/applications/${applicationId}/hold`, { reason }, {
       headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function getAdminCreatorAnalytics(
+  accessToken: string,
+  userId: string,
+  range: CreatorAnalyticsRange = '28d',
+): Promise<CreatorAnalytics> {
+  return getApiData<CreatorAnalytics>(
+    await apiClient.get(`/admin/creators/${userId}/analytics`, {
+      headers: authHeaders(accessToken),
+      params: { range },
     }),
   );
 }

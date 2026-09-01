@@ -11,6 +11,7 @@ import {
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  useAdminCreatorAnalyticsQuery,
   useApproveCreatorApplicationMutation,
   useCreatorApplicationsQuery,
   useHoldCreatorApplicationMutation,
@@ -32,7 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Textarea } from "../components/ui/textarea";
-import { creatorEarningsGraph, formatMoney, formatNumber } from "../data";
+import { formatMoney, formatNumber } from "../data";
 
 const tooltipStyle = { backgroundColor: "#1A1A1A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff" };
 
@@ -51,7 +52,11 @@ function adminStatus(status: CreatorApplication["status"]) {
   return "Pending";
 }
 
-function Performance({ creator, onBack }: { creator: CreatorApplication; onBack: () => void }) {
+function Performance({ accessToken, creator, onBack }: { accessToken: string; creator: CreatorApplication; onBack: () => void }) {
+  const analyticsQuery = useAdminCreatorAnalyticsQuery(accessToken, creator.user.id, '28d');
+  const analytics = analyticsQuery.data;
+  const summary = analytics?.summary;
+
   return (
     <div>
       <Button variant="ghost" onClick={onBack} className="text-[#A0A0A0] hover:text-white mb-4 -ml-2">
@@ -59,20 +64,27 @@ function Performance({ creator, onBack }: { creator: CreatorApplication; onBack:
       </Button>
       <PageHeader title={`${displayName(creator)} — Performance`} subtitle="Individual creator analytics" />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard label="Total Earnings" value={formatMoney(0)} change="0%" positive />
-        <StatCard label="Followers" value={formatNumber(0)} change="0%" positive />
-        <StatCard label="Engagement Rate" value="0%" change="0%" positive />
+        <StatCard label="Total Earnings" value={formatMoney(summary?.earningsUsd ?? 0)} change={`${formatMoney(summary?.availableEarningsUsd ?? 0)} available`} positive />
+        <StatCard label="Followers" value={formatNumber(summary?.followers ?? 0)} change={`+${formatNumber(summary?.newFollowers ?? 0)} in 28d`} positive />
+        <StatCard label="Engagement Rate" value={`${summary?.engagementRate ?? 0}%`} change={`${formatNumber(summary?.views ?? 0)} views`} positive />
       </div>
       <Panel title="Earnings Over Time">
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={creatorEarningsGraph}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-            <XAxis dataKey="month" stroke="#A0A0A0" tick={{ fontSize: 11 }} />
-            <YAxis stroke="#A0A0A0" tick={{ fontSize: 11 }} />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(132,204,22,0.08)" }} />
-            <Bar dataKey="earnings" fill="#84CC16" radius={[6, 6, 0, 0]} isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
+        {analyticsQuery.isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-20 text-[#A0A0A0]">
+            <Loader2 className="size-4 animate-spin text-[#84CC16]" />
+            Loading analytics...
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={(analytics?.trend ?? []).map((item) => ({ ...item, day: item.date.slice(5) }))}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="day" stroke="#A0A0A0" tick={{ fontSize: 11 }} />
+              <YAxis stroke="#A0A0A0" tick={{ fontSize: 11 }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(132,204,22,0.08)" }} />
+              <Bar dataKey="views" fill="#84CC16" radius={[6, 6, 0, 0]} isAnimationActive={false} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </Panel>
     </div>
   );
@@ -136,7 +148,7 @@ export function CreatorManagement({ accessToken }: { accessToken: string }) {
       });
   };
 
-  if (perf) return <Performance creator={perf} onBack={() => setPerf(null)} />;
+  if (perf) return <Performance accessToken={accessToken} creator={perf} onBack={() => setPerf(null)} />;
 
   return (
     <div>
@@ -367,7 +379,7 @@ function CreatorApplicationTable({
           {applications.map((application, index) => (
             <TableRow
               key={application.id}
-              onClick={() => onSelect(application)}
+              onClick={() => application.status === "approved" ? onPerformance(application) : onSelect(application)}
               className={`border-white/5 cursor-pointer hover:bg-white/5 ${index % 2 ? "bg-white/[0.02]" : ""}`}
             >
               <TableCell>
@@ -400,10 +412,10 @@ function CreatorApplicationTable({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-white/15 text-white hover:bg-white/5 bg-transparent"
+                      className="border-[#84CC16]/40 text-[#84CC16] hover:bg-[#84CC16]/10 bg-transparent"
                       onClick={() => onPerformance(application)}
                     >
-                      Performance
+                      Analytics
                     </Button>
                   ) : (
                     <ApproveButton disabled={isReviewing} onClick={() => onReview("approve", application)}>

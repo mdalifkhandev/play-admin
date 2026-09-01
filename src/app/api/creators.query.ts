@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   approveCreatorApplication,
+  getAdminCreatorAnalytics,
   holdCreatorApplication,
   listCreatorApplications,
   rejectCreatorApplication,
+  type CreatorAnalyticsRange,
   type CreatorApplicationStatus,
 } from './creators';
 import { dashboardQueryKeys } from './dashboard.query';
@@ -13,6 +15,8 @@ import { monetizationQueryKeys } from './monetization.query';
 export const creatorQueryKeys = {
   all: ['creator-applications'] as const,
   list: (status?: CreatorApplicationStatus) => [...creatorQueryKeys.all, 'list', status ?? 'all'] as const,
+  analytics: (userId?: string, range?: CreatorAnalyticsRange) =>
+    [...creatorQueryKeys.all, 'analytics', userId ?? '', range ?? '28d'] as const,
 };
 
 export function useCreatorApplicationsQuery(accessToken: string, status?: CreatorApplicationStatus) {
@@ -20,6 +24,19 @@ export function useCreatorApplicationsQuery(accessToken: string, status?: Creato
     queryKey: creatorQueryKeys.list(status),
     queryFn: () => listCreatorApplications(accessToken, status),
     enabled: Boolean(accessToken),
+    staleTime: 15_000,
+  });
+}
+
+export function useAdminCreatorAnalyticsQuery(
+  accessToken: string,
+  userId?: string,
+  range: CreatorAnalyticsRange = '28d',
+) {
+  return useQuery({
+    queryKey: creatorQueryKeys.analytics(userId, range),
+    queryFn: () => getAdminCreatorAnalytics(accessToken, userId || '', range),
+    enabled: Boolean(accessToken && userId),
     staleTime: 15_000,
   });
 }
