@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api/v1').replace(/\/$/, '');
+export const API_BASE_URL = (import.meta.env.VITE_API_URL).replace(/\/$/, '');
 const ADMIN_SESSION_STORAGE_KEY = 'play-admin-session';
 
 export const apiClient = axios.create({
@@ -92,12 +92,12 @@ export function handleApiError(error: unknown, defaultMessage = 'Request failed.
   if (axios.isAxiosError(error)) {
     const payload = error.response?.data as
       | {
+        message?: string;
+        error?: {
           message?: string;
-          error?: {
-            message?: string;
-            fieldErrors?: { message?: string }[];
-          };
-        }
+          fieldErrors?: { message?: string }[];
+        };
+      }
       | undefined;
 
     return (
