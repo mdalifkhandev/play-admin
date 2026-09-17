@@ -23,9 +23,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/
 
 # Test and coverage output
 coverage/
 
 .pnpm-store
+.gitignore
