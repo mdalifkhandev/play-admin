@@ -88,3 +88,124 @@ export async function reviewAdminAd(
     ),
   );
 }
+
+export type AdPackage = {
+  id: string;
+  name: string;
+  days: number;
+  priceUsd: number;
+  targetUsers: number;
+  description?: string;
+  isPopular: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAdPackagePayload = {
+  name: string;
+  days: number;
+  priceUsd: number;
+  targetUsers: number;
+  description?: string;
+  isPopular?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+};
+
+export type UpdateAdPackagePayload = Partial<CreateAdPackagePayload>;
+
+export async function listAdminAdPackages(accessToken: string) {
+  return getApiData<AdPackage[]>(
+    await apiClient.get('/admin/ads/packages', {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function createAdminAdPackage(accessToken: string, payload: CreateAdPackagePayload) {
+  return getApiData<AdPackage>(
+    await apiClient.post('/admin/ads/packages', payload, {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function updateAdminAdPackage(
+  accessToken: string,
+  packageId: string,
+  payload: UpdateAdPackagePayload,
+) {
+  return getApiData<AdPackage>(
+    await apiClient.put(`/admin/ads/packages/${packageId}`, payload, {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function deleteAdminAdPackage(accessToken: string, packageId: string) {
+  return getApiData<{ id: string; deleted: boolean }>(
+    await apiClient.delete(`/admin/ads/packages/${packageId}`, {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export type AdCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAdCategoryPayload = {
+  name: string;
+  icon?: string;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+};
+
+export type UpdateAdCategoryPayload = Partial<CreateAdCategoryPayload>;
+
+export async function listAdminAdCategories(accessToken: string) {
+  return getApiData<AdCategory[]>(
+    await apiClient.get('/admin/ads/categories', {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function createAdminAdCategory(accessToken: string, payload: CreateAdCategoryPayload) {
+  return getApiData<AdCategory>(
+    await apiClient.post('/admin/ads/categories', payload, {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function updateAdminAdCategory(
+  accessToken: string,
+  categoryId: string,
+  payload: UpdateAdCategoryPayload,
+) {
+  return getApiData<AdCategory>(
+    await apiClient.put(`/admin/ads/categories/${categoryId}`, payload, {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
+
+export async function deleteAdminAdCategory(accessToken: string, categoryId: string) {
+  return getApiData<{ id: string; deleted: boolean }>(
+    await apiClient.delete(`/admin/ads/categories/${categoryId}`, {
+      headers: authHeaders(accessToken),
+    }),
+  );
+}
