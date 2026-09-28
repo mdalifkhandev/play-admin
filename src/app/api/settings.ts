@@ -18,6 +18,13 @@ export interface PlatformFeatureFlags {
   withdrawals: boolean;
 }
 
+export interface AdMobConfig {
+  androidAppId?: string;
+  iosAppId?: string;
+  androidNativeAdId?: string;
+  iosNativeAdId?: string;
+}
+
 export interface PlatformSettings {
   maintenanceMode: boolean;
   maintenanceMessage: string;
@@ -27,12 +34,14 @@ export interface PlatformSettings {
   platformSharePercentage: number;
   languages: PlatformLanguage[];
   featureFlags: PlatformFeatureFlags;
+  adMobConfig?: AdMobConfig;
   updatedAt: string;
 }
 
 export type UpdatePlatformSettingsInput = Partial<
   Omit<PlatformSettings, 'updatedAt'> & {
-    featureFlags: Partial<PlatformFeatureFlags>;
+    featureFlags?: Partial<PlatformFeatureFlags>;
+    adMobConfig?: AdMobConfig;
   }
 >;
 

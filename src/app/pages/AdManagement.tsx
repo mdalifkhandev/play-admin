@@ -31,6 +31,7 @@ import {
   useUpdateAdminAdPackageMutation,
   useUpdateAdminAdCategoryMutation,
 } from "../api/ads.query";
+import { useAdminPlatformSettingsQuery, useUpdateAdminPlatformSettingsMutation } from "../api/settings.query";
 import type { AdCampaign, AdPackage, AdCategory } from "../api/ads";
 import { handleApiError } from "../api/client";
 import { ApproveButton, PageHeader, Panel, RejectButton, StatusPill } from "../components/shared";
@@ -139,6 +140,49 @@ export function AdManagement({ accessToken }: { accessToken: string }) {
     isActive: true,
     sortOrder: "1",
   });
+
+  const settingsQuery = useAdminPlatformSettingsQuery(accessToken);
+  const updateSettingsMutation = useUpdateAdminPlatformSettingsMutation(accessToken);
+
+  const [adMobForm, setAdMobForm] = useState({
+    androidAppId: "",
+    iosAppId: "",
+    androidNativeAdId: "",
+    iosNativeAdId: "",
+  });
+
+  const onAdMobTabClick = () => {
+    if (settingsQuery.data?.adMobConfig) {
+      setAdMobForm({
+        androidAppId: settingsQuery.data.adMobConfig.androidAppId || "ca-app-pub-3940256099942544~3347511713",
+        iosAppId: settingsQuery.data.adMobConfig.iosAppId || "ca-app-pub-3940256099942544~1458002511",
+        androidNativeAdId: settingsQuery.data.adMobConfig.androidNativeAdId || "ca-app-pub-3940256099942544/2247696110",
+        iosNativeAdId: settingsQuery.data.adMobConfig.iosNativeAdId || "ca-app-pub-3940256099942544/3986624511",
+      });
+    } else {
+      setAdMobForm({
+        androidAppId: "ca-app-pub-3940256099942544~3347511713",
+        iosAppId: "ca-app-pub-3940256099942544~1458002511",
+        androidNativeAdId: "ca-app-pub-3940256099942544/2247696110",
+        iosNativeAdId: "ca-app-pub-3940256099942544/3986624511",
+      });
+    }
+  };
+
+  const saveAdMobConfig = () => {
+    updateSettingsMutation
+      .mutateAsync({
+        adMobConfig: {
+          androidAppId: adMobForm.androidAppId,
+          iosAppId: adMobForm.iosAppId,
+          androidNativeAdId: adMobForm.androidNativeAdId,
+          iosNativeAdId: adMobForm.iosNativeAdId,
+        },
+      })
+      .then(() => toast.success("AdMob settings saved successfully."))
+      .catch((err) => toast.error(handleApiError(err, "Failed to save AdMob settings.")));
+  };
+
 
   const packages = packagesQuery.data ?? [];
 
@@ -345,6 +389,7 @@ export function AdManagement({ accessToken }: { accessToken: string }) {
           <TabsTrigger value="active">Active Campaigns</TabsTrigger>
           <TabsTrigger value="packages">Pricing Packages</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="admob" onClick={onAdMobTabClick}>AdMob Config</TabsTrigger>
         </TabsList>
 
         <TabsContent value="advertisers" className="mt-4">
@@ -628,6 +673,88 @@ export function AdManagement({ accessToken }: { accessToken: string }) {
                 ))}
               </TableBody>
             </Table>
+          </Panel>
+        </TabsContent>
+
+        <TabsContent value="admob" className="mt-4">
+          <Panel>
+            <div className="mb-5">
+              <h3 className="text-white text-base font-semibold">Google AdMob Configuration</h3>
+              <p className="text-sm text-[#A0A0A0]">
+                Configure Native In-Feed ads for Android and iOS. By default, Google's test IDs are shown below. 
+                When ready, replace them with your real IDs from your AdMob account.
+              </p>
+            </div>
+
+            {settingsQuery.isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-[#A0A0A0]">
+                <Loader2 className="size-4 animate-spin text-[#84CC16]" />
+                Loading settings...
+              </div>
+            ) : (
+              <div className="space-y-6 max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-4">
+                    <h4 className="text-white font-medium text-sm flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-[#84CC16]"></div> Android IDs
+                    </h4>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="android-app-id" className="text-xs text-[#A0A0A0]">Android App ID</Label>
+                      <Input
+                        id="android-app-id"
+                        value={adMobForm.androidAppId}
+                        onChange={(e) => setAdMobForm((p) => ({ ...p, androidAppId: e.target.value }))}
+                        className="bg-white/5 border-white/10 text-white font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="android-native-id" className="text-xs text-[#A0A0A0]">Android Native Ad Unit ID</Label>
+                      <Input
+                        id="android-native-id"
+                        value={adMobForm.androidNativeAdId}
+                        onChange={(e) => setAdMobForm((p) => ({ ...p, androidNativeAdId: e.target.value }))}
+                        className="bg-white/5 border-white/10 text-white font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="text-white font-medium text-sm flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div> iOS IDs
+                    </h4>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ios-app-id" className="text-xs text-[#A0A0A0]">iOS App ID</Label>
+                      <Input
+                        id="ios-app-id"
+                        value={adMobForm.iosAppId}
+                        onChange={(e) => setAdMobForm((p) => ({ ...p, iosAppId: e.target.value }))}
+                        className="bg-white/5 border-white/10 text-white font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ios-native-id" className="text-xs text-[#A0A0A0]">iOS Native Ad Unit ID</Label>
+                      <Input
+                        id="ios-native-id"
+                        value={adMobForm.iosNativeAdId}
+                        onChange={(e) => setAdMobForm((p) => ({ ...p, iosNativeAdId: e.target.value }))}
+                        className="bg-white/5 border-white/10 text-white font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <Button 
+                    className="bg-[#84CC16] text-black font-bold hover:bg-[#84CC16]/90" 
+                    onClick={saveAdMobConfig}
+                    disabled={updateSettingsMutation.isPending}
+                  >
+                    {updateSettingsMutation.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                    Save Configuration
+                  </Button>
+                </div>
+              </div>
+            )}
           </Panel>
         </TabsContent>
       </Tabs>
