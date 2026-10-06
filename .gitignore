@@ -8,6 +8,8 @@ build/
 .vite/
 
 # Local environment
+.env
+.env.*
 !.env.example
 
 # Logs
@@ -24,6 +26,3 @@ Thumbs.db
 
 # Test and coverage output
 coverage/
-
-.pnpm-store
-.gitignore
